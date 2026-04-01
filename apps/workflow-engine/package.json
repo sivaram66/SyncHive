@@ -1,0 +1,25 @@
+{
+  "name": "@synchive/workflow-engine",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon --exec tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@synchive/db": "*",
+    "@synchive/queue": "*",
+    "@synchive/logger": "*",
+    "@synchive/shared-types": "*",
+    "dotenv": "^16.5.0",
+    "ioredis": "^5.4.0",
+    "bullmq": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "nodemon": "^3.1.0"
+  }
+}

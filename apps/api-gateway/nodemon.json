@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "../../packages"],
+  "ext": "ts,json",
+  "ignore": ["node_modules", "dist"],
+  "delay": "1000"
+}
