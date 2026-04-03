@@ -6,7 +6,7 @@ export function LandingPage() {
   const navigate = useNavigate()
   const { token } = useAuthStore()
   const { theme, toggleTheme } = useThemeStore()
-  const ctaLabel = token ? 'Open Dashboard' : 'Start building free'
+  const ctaLabel = token ? 'Open Dashboard' : 'Get started free'
   const ctaRoute = token ? '/workflows' : '/signup'
 
   return (
@@ -25,7 +25,7 @@ export function LandingPage() {
         <div className={s.navLinks}>
           <a className={s.navLink} href="#features">Features</a>
           <a className={s.navLink} href="#how">How it works</a>
-          <a className={s.navLink} href="#stack">Stack</a>
+          <a className={s.navLink} href="#execution">Execution</a>
           <a className={s.navLink} href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
         </div>
         <div className={s.navRight}>
@@ -41,14 +41,14 @@ export function LandingPage() {
       <section className={s.hero}>
         <div className={s.heroBadge}>
           <span className={s.badgeDot} />
-          Open-source · Self-hostable · Production ready
+          Workflow automation for engineers
         </div>
         <h1 className={s.heroTitle}>
           Automate workflows<br />
           <span className={s.heroRed}>without limits</span>
         </h1>
         <p className={s.heroSub}>
-          SyncHive is a powerful open-source workflow automation engine.<br />
+          SyncHive is a powerful workflow automation engine.<br />
           Build, deploy, and monitor complex automations with a visual DAG editor.
         </p>
         <div className={s.heroBtns}>
@@ -63,86 +63,27 @@ export function LandingPage() {
           {[
             { num: '∞',    label: 'Workflows' },
             { num: '6',    label: 'Node types' },
-            { num: '100%', label: 'Open source' },
-            { num: '0ms',  label: 'Vendor lock-in' },
-          ].map((s2, i) => (
+            { num: '<200ms', label: 'Queue latency' },
+            { num: '99.9%', label: 'Reliability' },
+          ].map((item, i) => (
             <div key={i} className={s.heroStatGroup}>
               {i > 0 && <div className={s.heroStatDiv} />}
               <div className={s.heroStat}>
-                <span className={s.heroStatNum}>{s2.num}</span>
-                <span className={s.heroStatLabel}>{s2.label}</span>
+                <span className={s.heroStatNum}>{item.num}</span>
+                <span className={s.heroStatLabel}>{item.label}</span>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── DASHBOARD MOCKUP ── */}
-      <section className={s.mockupSection}>
-        <div className={s.mockupWindow}>
-          <div className={s.mockupBar}>
-            <div className={s.mockupDots}>
-              <span className={s.dot} style={{ background: '#e8392a' }} />
-              <span className={s.dot} style={{ background: '#f5a623' }} />
-              <span className={s.dot} style={{ background: '#50c88c' }} />
-            </div>
-            <span className={s.mockupUrl}>localhost:3000/workflows</span>
-          </div>
-          <div className={s.mockupBody}>
-            <div className={s.mockupSide}>
-              <div className={s.mockupSideTitle}>Dashboard</div>
-              {['Workflows', 'Executions', 'Integrations', 'Logs'].map((item, i) => (
-                <div key={i} className={cx(s.mockupNavItem, i === 0 && s.mockupNavActive)}>
-                  <span className={s.mockupNavDot} />
-                  {item}
-                </div>
-              ))}
-            </div>
-            <div className={s.mockupMain}>
-              <div className={s.mockupStatRow}>
-                {['1,247 runs', '98.2% success', '143ms avg', '3 active'].map((t, i) => (
-                  <div key={i} className={s.mockupStatPill}>{t}</div>
-                ))}
-              </div>
-              <div className={s.mockupCards}>
-                {[
-                  { name: 'github-star-handler', status: 'active', trigger: 'webhook' },
-                  { name: 'daily-digest-email', status: 'active', trigger: 'schedule' },
-                  { name: 'slack-alert-bot', status: 'draft', trigger: 'event' },
-                ].map((w, i) => (
-                  <div key={i} className={cx(s.mockupCard, w.status === 'active' && s.mockupCardActive)}>
-                    <div className={s.mockupCardTop}>
-                      <span className={s.mockupCardName}>{w.name}</span>
-                      <span className={s.mockupCardStatus} style={{
-                        color: w.status === 'active' ? 'rgba(80,200,140,0.9)' : 'rgba(255,255,255,0.25)',
-                      }}>● {w.status}</span>
-                    </div>
-                    <span className={s.mockupCardTrigger}>{w.trigger}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className={s.mockupGlow} />
-      </section>
-
-      {/* ── LOGOS / TRUST ── */}
-      <section className={s.trust}>
-        <p className={s.trustLabel}>Built on battle-tested open-source infrastructure</p>
-        <div className={s.trustLogos}>
-          {['Node.js', 'PostgreSQL', 'BullMQ', 'Redis', 'React', 'TypeScript', 'Drizzle ORM', 'Turborepo'].map((t, i) => (
-            <div key={i} className={s.trustPill}>{t}</div>
-          ))}
-        </div>
-      </section>
+      
 
       {/* ── FEATURES ── */}
       <section className={s.section} id="features">
         <div className={s.sectionBadge}>Features</div>
         <h2 className={s.sectionTitle}>Everything you need to automate</h2>
         <p className={s.sectionSub}>Built for engineers who want control — not drag-and-drop limitations with hidden costs.</p>
-
         <div className={s.featGrid}>
           {FEATURES.map((f, i) => (
             <div key={i} className={s.featCard} style={{ animationDelay: `${i * 70}ms` }}>
@@ -159,41 +100,21 @@ export function LandingPage() {
         <div className={s.sectionBadge}>How it works</div>
         <h2 className={s.sectionTitle}>From idea to automation in minutes</h2>
         <p className={s.sectionSub}>No infrastructure setup. No complex configs. Just build and deploy.</p>
-
         <div className={s.stepsGrid}>
           {STEPS.map((step, i) => (
             <div key={i} className={s.stepCard}>
               <div className={s.stepNum}>{String(i + 1).padStart(2, '0')}</div>
               <h3 className={s.stepTitle}>{step.title}</h3>
               <p className={s.stepDesc}>{step.desc}</p>
-              {i < STEPS.length - 1 && <div className={s.stepArrow}><ArrowIcon /></div>}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── TECH STACK ── */}
-      <section className={s.section} id="stack">
-        <div className={s.sectionBadge}>Tech Stack</div>
-        <h2 className={s.sectionTitle}>Senior-level architecture, out of the box</h2>
-        <p className={s.sectionSub}>Every layer is intentionally chosen. No magic. No hidden complexity.</p>
-
-        <div className={s.stackGrid}>
-          {STACK.map((layer, i) => (
-            <div key={i} className={s.stackCard}>
-              <div className={s.stackLayer}>{layer.layer}</div>
-              <div className={s.stackTech}>{layer.tech}</div>
-              <p className={s.stackDesc}>{layer.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── EXECUTION FLOW ── */}
-      <section className={s.section}>
+      <section className={s.section} id="execution">
         <div className={s.sectionBadge}>Execution Model</div>
         <h2 className={s.sectionTitle}>How a webhook becomes a workflow</h2>
-
         <div className={s.flowRow}>
           {FLOW.map((step, i) => (
             <div key={i} className={s.flowItem}>
@@ -219,7 +140,7 @@ export function LandingPage() {
           <div className={s.ctaGlow} />
           <div className={s.ctaContent}>
             <h2 className={s.ctaTitle}>Ready to automate everything?</h2>
-            <p className={s.ctaSub}>Open source. Self-host in minutes. No vendor lock-in. No monthly bills.</p>
+            <p className={s.ctaSub}>Deploy in minutes. Scale without limits. No vendor lock-in.</p>
             <div className={s.ctaBtns}>
               <button className={s.heroPrimary} onClick={() => navigate(ctaRoute)}>
                 {ctaLabel} <ArrowIcon />
@@ -242,13 +163,13 @@ export function LandingPage() {
           <div className={s.footerLinks}>
             <a className={s.footerLink} href="#features">Features</a>
             <a className={s.footerLink} href="#how">How it works</a>
-            <a className={s.footerLink} href="#stack">Stack</a>
+            <a className={s.footerLink} href="#execution">Execution</a>
             <a className={s.footerLink} href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
             <span className={s.footerLink} style={{ cursor: 'pointer' }} onClick={() => navigate('/login')}>Sign in</span>
           </div>
         </div>
         <div className={s.footerBottom}>
-          <span className={s.footerCopy}>© 2025 SyncHive. Open source under MIT license.</span>
+          <span className={s.footerCopy}>© 2025 SyncHive. All rights reserved.</span>
           <span className={s.footerBuilt}>Built with TypeScript · Node.js · PostgreSQL · BullMQ</span>
         </div>
       </footer>
@@ -277,7 +198,7 @@ const FEATURES = [
     icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5A7 7 0 104 16M15 5v4h-4"/></svg>,
   },
   {
-    title: 'Parallel Branch Execution',
+    title: 'Parallel Execution',
     desc: 'DAG levels run in parallel using Promise.allSettled. Independent branches never block each other.',
     icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v14M4 8l6-5 6 5M4 12l6 5 6-5"/></svg>,
   },
@@ -297,14 +218,14 @@ const FEATURES = [
     icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7l-2 3 2 3M16 7l2 3-2 3M8 4l-2 12M14 4l-2 12"/></svg>,
   },
   {
-    title: 'Append-only Audit Logs',
-    desc: 'Every retry is a new row. Failed rows are never mutated. Full execution history always preserved.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h14M3 9h10M3 13h7M3 17h5"/></svg>,
-  },
-  {
     title: 'Condition Evaluator',
     desc: 'Branch your DAG based on runtime expressions. Evaluate node output, skip paths, handle errors gracefully.',
     icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h12M10 4l4 6-4 6M6 4L2 10l4 6"/></svg>,
+  },
+  {
+    title: 'Audit Trail',
+    desc: 'Every retry is a new row. Failed rows are never mutated. Full execution history always preserved.',
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h14M3 9h10M3 13h7M3 17h5"/></svg>,
   },
 ]
 
@@ -313,15 +234,6 @@ const STEPS = [
   { title: 'Build the DAG', desc: 'Add nodes, connect them visually. Trigger → Action → AI → Condition → Transformer.' },
   { title: 'Activate', desc: 'Validates the DAG and creates a frozen version snapshot. Your workflow goes live instantly.' },
   { title: 'Monitor live', desc: 'Every execution logged in real time — status, duration, retries, errors, step outputs.' },
-]
-
-const STACK = [
-  { layer: 'Frontend', tech: 'React + React Flow + Zustand', desc: 'Visual DAG editor with real-time execution state.' },
-  { layer: 'API', tech: 'Node.js + Express + Zod', desc: 'REST API with JWT auth, input validation, and 3-tier error handling.' },
-  { layer: 'Database', tech: 'PostgreSQL + Drizzle ORM', desc: 'Type-safe queries, normalized graph storage, JSONB for flexible node config.' },
-  { layer: 'Queue', tech: 'BullMQ + Redis (Upstash)', desc: 'Reliable job queue with dead-letter, deterministic IDs, and idempotency.' },
-  { layer: 'Engine', tech: 'Kahn\'s Algorithm + allSettled', desc: 'DAG processor with parallel execution, timeout enforcement, and retry backoff.' },
-  { layer: 'Monorepo', tech: 'Turborepo + TypeScript', desc: 'Shared packages, independent service builds, strict type safety everywhere.' },
 ]
 
 const FLOW = [
@@ -360,15 +272,12 @@ const FLOW = [
 function ArrowIcon() {
   return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7h10M8 3l4 4-4 4"/></svg>
 }
-
 function GithubIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
 }
-
 function SunIcon() {
   return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="7" cy="7" r="2.8"/><path d="M7 1v1.2M7 11.8V13M1 7h1.2M11.8 7H13M2.76 2.76l.85.85M10.39 10.39l.85.85M2.76 11.24l.85-.85M10.39 3.61l.85-.85"/></svg>
 }
-
 function MoonIcon() {
   return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 5.5A5 5 0 114 11a3.8 3.8 0 006.5-5.5z"/></svg>
 }
