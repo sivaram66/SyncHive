@@ -1,0 +1,58 @@
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.4s;
+}
+
+[data-theme='dark'] .canvas,
+:root .canvas {
+  background: #05070d;
+}
+
+[data-theme='light'] .canvas {
+  background: #ece9e3;
+}
+
+/* Ambient glow orbs — dark mode only */
+[data-theme='dark'] .canvas::before,
+:root .canvas::before {
+  content: '';
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(232,57,42,0.05) 0%, transparent 60%);
+  top: -280px;
+  left: -100px;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+[data-theme='dark'] .canvas::after,
+:root .canvas::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(100,120,255,0.04) 0%, transparent 65%);
+  bottom: -180px;
+  right: 60px;
+  pointer-events: none;
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.canvas :global(.react-flow__renderer),
+.canvas :global(.react-flow__container) {
+  z-index: 1;
+}
+
+/* Make React Flow background dots visible */
+.canvas :global(.react-flow__background pattern circle) {
+  fill: rgba(255,255,255,0.18) !important;
+}
+
+[data-theme='light'] .canvas :global(.react-flow__background pattern circle) {
+  fill: rgba(0,0,0,0.15) !important;
+}

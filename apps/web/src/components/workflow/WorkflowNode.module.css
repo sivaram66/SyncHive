@@ -1,0 +1,170 @@
+.node {
+  min-width: 168px;
+  padding: 15px 17px;
+  border-radius: 14px;
+  border: 0.5px solid var(--gb2);
+  cursor: grab;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Dark glassmorphism */
+[data-theme='dark'] .node,
+:root .node {
+  background: rgba(16, 22, 38, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 0 0.5px rgba(255,255,255,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.07);
+}
+
+/* Light */
+[data-theme='light'] .node {
+  background: #ffffff;
+  box-shadow: var(--node-shadow);
+}
+
+/* Top shimmer line */
+.node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transition: opacity 0.4s;
+}
+
+[data-theme='light'] .node::before { display: none; }
+
+.node:hover {
+  border-color: var(--gb3);
+  transform: translateY(-1px);
+}
+
+[data-theme='dark'] .node:hover,
+:root .node:hover {
+  box-shadow:
+    0 12px 40px rgba(0,0,0,0.6),
+    0 0 0 0.5px rgba(255,255,255,0.13),
+    inset 0 1px 0 rgba(255,255,255,0.09);
+}
+
+.node.selected {
+  border-color: rgba(255,255,255,0.28) !important;
+}
+
+[data-theme='dark'] .node.selected,
+:root .node.selected {
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.20),
+    0 0 40px rgba(255,255,255,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+[data-theme='light'] .node.selected {
+  box-shadow: var(--node-shadow-active) !important;
+}
+
+/* Running state glows red */
+.node.running {
+  border-color: var(--accent-border) !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 0 1px var(--accent-border),
+    0 0 30px var(--accent-glow) !important;
+}
+
+.node.completed {
+  border-color: rgba(80,200,140,0.35) !important;
+}
+
+.node.failed {
+  border-color: rgba(232,57,42,0.5) !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.5),
+    0 0 20px rgba(232,57,42,0.2) !important;
+}
+
+/* ── Eyebrow ── */
+.eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  color: var(--t4);
+  transition: color 0.4s;
+}
+
+/* ── Title ── */
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 11px;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+  transition: color 0.4s;
+}
+
+/* ── Status chip ── */
+.chip {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--mono);
+  border: 0.5px solid var(--gb1);
+  color: var(--t4);
+  background: var(--glass);
+  transition: all 0.3s;
+}
+
+.chip_pending   { color: var(--t4); }
+.chip_running   { color: var(--t1); border-color: var(--gb3); background: var(--glass2); }
+.chip_completed { color: rgba(80,200,140,0.9); border-color: rgba(80,200,140,0.28); background: rgba(80,200,140,0.08); }
+.chip_failed    { color: rgba(232,57,42,0.9);  border-color: rgba(232,57,42,0.35);  background: rgba(232,57,42,0.10); }
+.chip_retrying  { color: rgba(240,165,60,0.9); border-color: rgba(240,165,60,0.28); background: rgba(240,165,60,0.08); }
+.chip_timed_out { color: rgba(232,57,42,0.7);  border-color: rgba(232,57,42,0.25); }
+.chip_skipped   { color: var(--t4); }
+
+.chipDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.dotPulse { animation: pulse 1.8s ease-in-out infinite; }
+
+/* ── Handles ── */
+.handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: var(--s2) !important;
+  border: 1.5px solid var(--gb3) !important;
+  border-radius: 50% !important;
+  transition: all 0.15s !important;
+}
+
+.handle:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.15; }
+}

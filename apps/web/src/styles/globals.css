@@ -1,0 +1,178 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ─── DARK THEME (default) ────────────────────────────────── */
+:root {
+  --font: 'Geist', sans-serif;
+  --mono: 'Geist Mono', monospace;
+
+  --page:   #000000;
+  --s1:     #060606;
+  --s2:     #0a0a0a;
+  --s3:     #111111;
+
+  --glass:  rgba(255,255,255,0.03);
+  --glass2: rgba(255,255,255,0.05);
+  --glass3: rgba(255,255,255,0.09);
+
+  --gb1: rgba(255,255,255,0.06);
+  --gb2: rgba(255,255,255,0.10);
+  --gb3: rgba(255,255,255,0.18);
+
+  --t1: #f0f4ff;
+  --t2: rgba(240,244,255,0.65);
+  --t3: rgba(240,244,255,0.35);
+  --t4: rgba(240,244,255,0.18);
+
+  --ink:   #ffffff;
+  --paper: #080a0f;
+
+  /* Red accent — OpenBots style */
+  --accent:        #e8392a;
+  --accent-hover:  #ff4535;
+  --accent-glow:   rgba(232,57,42,0.35);
+  --accent-subtle: rgba(232,57,42,0.12);
+  --accent-border: rgba(232,57,42,0.30);
+
+  --node-shadow:        0 8px 32px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.09);
+  --node-shadow-active: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.20), 0 0 40px rgba(255,255,255,0.06);
+  --card-shadow:        0 2px 12px rgba(0,0,0,0.4), 0 0 0 0.5px rgba(255,255,255,0.07);
+  --btn-shadow:         0 0 24px rgba(232,57,42,0.4), 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ─── LIGHT THEME ─────────────────────────────────────────── */
+[data-theme='light'] {
+  --page:   #f0ede8;
+  --s1:     #e8e4de;
+  --s2:     #f8f6f3;
+  --s3:     #ffffff;
+
+  --glass:  rgba(0,0,0,0.025);
+  --glass2: rgba(0,0,0,0.045);
+  --glass3: rgba(0,0,0,0.065);
+
+  --gb1: rgba(0,0,0,0.07);
+  --gb2: rgba(0,0,0,0.11);
+  --gb3: rgba(0,0,0,0.20);
+
+  --t1: #111008;
+  --t2: rgba(17,16,8,0.60);
+  --t3: rgba(17,16,8,0.35);
+  --t4: rgba(17,16,8,0.18);
+
+  --ink:   #111008;
+  --paper: #ffffff;
+
+  --accent:        #d42e20;
+  --accent-hover:  #e8392a;
+  --accent-glow:   rgba(212,46,32,0.20);
+  --accent-subtle: rgba(212,46,32,0.08);
+  --accent-border: rgba(212,46,32,0.22);
+
+  --node-shadow:        0 4px 20px rgba(0,0,0,0.10), 0 0 0 0.5px rgba(0,0,0,0.08);
+  --node-shadow-active: 0 4px 20px rgba(0,0,0,0.14), 0 0 0 1.5px rgba(0,0,0,0.18), 0 0 0 5px rgba(236,233,227,1);
+  --card-shadow:        0 1px 4px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.07);
+  --btn-shadow:         0 4px 14px rgba(212,46,32,0.35);
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; width: 100%; }
+
+body {
+  font-family: var(--font);
+  background: var(--page);
+  color: var(--t1);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.4s ease, color 0.4s ease;
+  overflow: auto;   
+}
+
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--gb2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gb3); }
+
+/* ─── REACT FLOW ──────────────────────────────────────────── */
+.react-flow__background { background: transparent !important; }
+
+.react-flow__controls {
+  background: var(--s2) !important;
+  border: 0.5px solid var(--gb2) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--card-shadow) !important;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 0.5px solid var(--gb1) !important;
+  fill: var(--t3) !important;
+  width: 28px !important;
+  height: 28px !important;
+  transition: all 0.15s !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--glass2) !important;
+  fill: var(--t1) !important;
+}
+.react-flow__controls-button:last-child { border-bottom: none !important; }
+
+.react-flow__minimap {
+  background: var(--s2) !important;
+  border: 0.5px solid var(--gb2) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--card-shadow) !important;
+}
+
+.react-flow__edge-path {
+  stroke: var(--gb2) !important;
+  stroke-width: 1.5 !important;
+}
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--gb3) !important;
+}
+
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: var(--s3) !important;
+  border: 1.5px solid var(--gb3) !important;
+  border-radius: 50% !important;
+  transition: all 0.15s !important;
+}
+.react-flow__handle:hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 10px var(--accent-glow) !important;
+}
+
+.react-flow__node { cursor: grab; }
+.react-flow__node:active { cursor: grabbing; }
+
+/* ─── ANIMATIONS ──────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.15; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+  50%       { box-shadow: 0 0 20px var(--accent-glow); }
+}
+
+.animate-fade-up { animation: fadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-in { animation: fadeIn 0.3s ease both; }
+.animate-pulse   { animation: pulse 1.8s ease-in-out infinite; }
