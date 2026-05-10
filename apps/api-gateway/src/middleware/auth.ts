@@ -8,11 +8,13 @@ export interface AuthPayload {
   email: string;
 }
 
-// Extend Express Request to include authenticated user
+// Keep JwtPayload as an alias for internal use
+type JwtPayload = AuthPayload;
+
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthPayload;
+      user?: JwtPayload;
     }
   }
 }
@@ -21,30 +23,33 @@ export function authenticate(
   req: Request,
   _res: Response,
   next: NextFunction
-): void {
+) {
   try {
-    const authHeader = req.headers.authorization;
+    // Check Authorization header first
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError(401, "UNAUTHORIZED", "Missing or invalid authorization header");
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
     }
 
-    const token = authHeader.split(" ")[1];
+    // Fall back to query param — needed for SSE (EventSource can't set headers)
+    if (!token && req.query.token) {
+      token = req.query.token as string;
+    }
 
-    const payload = jwt.verify(token, config.jwtSecret) as AuthPayload;
+    if (!token) {
+      throw new AppError(401, "UNAUTHORIZED", "No token provided");
+    }
+
+    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
     req.user = payload;
     next();
   } catch (error) {
     if (error instanceof AppError) {
       next(error);
-      return;
+    } else {
+      next(new AppError(401, "UNAUTHORIZED", "Invalid or expired token"));
     }
-
-    if (error instanceof jwt.JsonWebTokenError) {
-      next(new AppError(401, "INVALID_TOKEN", "Invalid or expired token"));
-      return;
-    }
-
-    next(error);
   }
 }

@@ -8,7 +8,7 @@ import {
 } from "@synchive/db";
 import { ApiResponse } from "@synchive/shared-types";
 import { db } from "../services/db.service";
-import { executionQueue } from "../services/queue.service";
+// import { executionQueue } from "../services/queue.service";
 import { enqueueExecution, ExecutionJobData } from "@synchive/queue";
 import { createLogger } from "@synchive/logger";
 import { AppError } from "../middleware/error-handler";
@@ -22,7 +22,7 @@ webhookRouter.post(
   "/:webhookPath",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { webhookPath } = req.params;
+      const webhookPath = req.params.webhookPath as string;
       const fullPath = `/hooks/${webhookPath}`;
 
       logger.info({ path: fullPath }, "Webhook received");
@@ -102,10 +102,10 @@ webhookRouter.post(
         executionId: execution.id,
         workflowId: workflow.id,
         versionId: version.id,
+        triggeredBy: 'webhook',
         triggerData,
       };
-
-      await enqueueExecution(executionQueue, jobData);
+      await enqueueExecution(jobData);
 
       logger.info(
         {

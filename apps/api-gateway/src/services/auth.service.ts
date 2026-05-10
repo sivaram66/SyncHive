@@ -77,7 +77,7 @@ export class AuthService {
   private static generateToken(userId: string, email: string): string {
     const payload: AuthPayload = { userId, email };
     return jwt.sign(payload, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
+      expiresIn: config.jwtExpiresIn as unknown as number,
     });
   }
 }

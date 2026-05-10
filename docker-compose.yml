@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  # Jaeger — distributed trace collector and UI
+  #
+  # Ports:
+  #   4317 — OTLP gRPC (we don't use this, but it's standard to expose)
+  #   4318 — OTLP HTTP (our apps POST spans here)
+  #   16686 — Jaeger UI (open in browser to see traces)
+  #
+  # OTEL_EXPORTER_OTLP_ENDPOINT in both apps should point to:
+  #   http://localhost:4318
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: synchive-jaeger
+    ports:
+      - '4317:4317'   # OTLP gRPC
+      - '4318:4318'   # OTLP HTTP  ← apps send here
+      - '16686:16686' # Jaeger UI  ← open this in browser
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    restart: unless-stopped

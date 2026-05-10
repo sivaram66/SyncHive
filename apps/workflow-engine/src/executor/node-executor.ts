@@ -1,6 +1,8 @@
 import { SnapshotNode } from "@synchive/shared-types";
 import { resolveConfig } from "./template-resolver";
 import { createLogger } from "@synchive/logger";
+import { sendEmail } from "./integrations/resend";
+import { postSlackMessage } from "./integrations/slack";
 
 const logger = createLogger({ service: "workflow-engine" });
 
@@ -61,67 +63,59 @@ export async function executeNode(
 
 // ==================== NODE TYPE HANDLERS ====================
 
-/**
- * Trigger nodes simply pass through the trigger data as output.
- * They're the entry point — their "execution" is just forwarding.
- */
 async function executeTrigger(
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
-  return {
-    success: true,
-    output: input,
-  };
+  return { success: true, output: input };
 }
 
-/**
- * Action nodes perform side effects — send emails, HTTP calls, etc.
- * For now, simulates the action and returns mock output.
- * The integrations service will handle real execution later.
- */
 async function executeAction(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
   const integration = config.integration as string;
+  logger.info({ integration }, "Executing action node");
 
-  logger.info({ integration, config }, "Executing action node");
-
-  // Simulated execution — will be replaced by real integration calls
   switch (integration) {
-    case "email":
-      return {
-        success: true,
-        output: {
-          emailId: `email-${Date.now()}`,
-          to: config.to,
-          subject: config.subject,
-          delivered: true,
-          sentAt: new Date().toISOString(),
-        },
-      };
-
-    case "slack":
-      return {
-        success: true,
-        output: {
-          messageId: `slack-${Date.now()}`,
-          channel: config.channel,
-          sent: true,
-          sentAt: new Date().toISOString(),
-        },
-      };
-
     case "http":
-      return {
-        success: true,
-        output: {
-          statusCode: 200,
-          body: { message: "HTTP request simulated" },
-          url: config.url,
-          respondedAt: new Date().toISOString(),
-        },
-      };
+      return executeHTTP(config);
+
+    case "resend":
+    case "email": {
+      try {
+        const result = await sendEmail({
+          from: config.from as string | undefined,
+          to: config.to as string | string[],
+          subject: config.subject as string,
+          html: config.html as string | undefined,
+          text: config.text as string | undefined,
+        });
+        logger.info({ emailId: result.emailId, to: result.to }, "Email sent via Resend");
+        return { success: true, output: result as unknown as Record<string, unknown> };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        logger.error({ error }, "Resend email failed");
+        return { success: false, output: {}, error };
+      }
+    }
+
+    case "slack": {
+      try {
+        const result = await postSlackMessage({
+          webhookUrl: config.webhookUrl as string | undefined,
+          text: config.text as string,
+          blocks: config.blocks as unknown[] | undefined,
+          username: config.username as string | undefined,
+          iconEmoji: config.iconEmoji as string | undefined,
+        });
+        logger.info({ channel: result.channel }, "Message posted to Slack");
+        return { success: true, output: result as unknown as Record<string, unknown> };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        logger.error({ error }, "Slack message failed");
+        return { success: false, output: {}, error };
+      }
+    }
 
     default:
       return {
@@ -136,44 +130,94 @@ async function executeAction(
   }
 }
 
-/**
- * Condition nodes evaluate an expression and return the result.
- * Used for if/else branching in workflows.
- */
+async function executeHTTP(
+  config: Record<string, unknown>
+): Promise<NodeExecutionResult> {
+  const method = ((config.method as string) || "GET").toUpperCase();
+  const url = config.url as string;
+
+  if (!url) {
+    return { success: false, output: {}, error: "HTTP action requires a 'url' in config" };
+  }
+
+  const headers: Record<string, string> = {
+    "User-Agent": "SyncHive/1.0",
+    ...(config.headers as Record<string, string> || {}),
+  };
+
+  const hasBody = ["POST", "PUT", "PATCH"].includes(method);
+  if (hasBody && !headers["Content-Type"] && !headers["content-type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const requestBody = hasBody && config.body ? JSON.stringify(config.body) : undefined;
+  logger.info({ method, url, hasBody: !!requestBody }, "Making HTTP request");
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch(url, { method, headers, body: requestBody });
+    const durationMs = Date.now() - startTime;
+    const contentType = response.headers.get("content-type") || "";
+
+    let responseBody: unknown;
+    if ((config.responseType as string) === "text" || !contentType.includes("application/json")) {
+      responseBody = await response.text();
+    } else {
+      try { responseBody = await response.json(); }
+      catch { responseBody = await response.text(); }
+    }
+
+    const output: Record<string, unknown> = {
+      statusCode: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: responseBody,
+      durationMs,
+      url,
+      method,
+      requestedAt: new Date().toISOString(),
+    };
+
+    if (response.ok) {
+      logger.info({ statusCode: response.status, durationMs, url }, "HTTP request succeeded");
+      return { success: true, output };
+    } else {
+      logger.warn({ statusCode: response.status, durationMs, url }, "HTTP request returned non-2xx status");
+      return { success: false, output, error: `HTTP ${response.status} ${response.statusText}` };
+    }
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error({ error: errorMsg, url, method, durationMs }, "HTTP request failed");
+    return {
+      success: false,
+      output: { url, method, durationMs, requestedAt: new Date().toISOString() },
+      error: `HTTP request failed: ${errorMsg}`,
+    };
+  }
+}
+
 async function executeCondition(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
   const expression = config.expression as string;
-
-  // Use the condition evaluator
   const { evaluateCondition } = await import("./condition-evaluator");
   const result = evaluateCondition(expression, input);
-
   return {
     success: true,
-    output: {
-      ...input,
-      conditionResult: result,
-      evaluatedExpression: expression,
-    },
+    output: { ...input, conditionResult: result, evaluatedExpression: expression },
   };
 }
 
-/**
- * AI nodes call language models. Simulated for now.
- * Will integrate with providers like OpenAI, Anthropic, Groq later.
- */
 async function executeAI(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
   const model = config.model as string;
   const prompt = config.prompt as string;
-
   logger.info({ model, promptLength: prompt?.length }, "Executing AI node");
-
-  // Simulated AI response — will be replaced by real API calls
   return {
     success: true,
     output: {
@@ -185,75 +229,45 @@ async function executeAI(
   };
 }
 
-/**
- * Transformer nodes manipulate data — filter, map, reshape.
- * Executes a transformation expression on the input.
- */
 async function executeTransformer(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
   const transformType = config.transformType as string;
-
   switch (transformType) {
-    case "pick":
-      // Pick specific fields from input
+    case "pick": {
       const fields = config.fields as string[];
       const picked: Record<string, unknown> = {};
       for (const field of fields || []) {
-        if (field in input) {
-          picked[field] = input[field];
-        }
+        if (field in input) picked[field] = input[field];
       }
       return { success: true, output: picked };
-
-    case "merge":
-      // Merge additional data into input
+    }
+    case "merge": {
       const mergeData = config.mergeData as Record<string, unknown>;
       return { success: true, output: { ...input, ...mergeData } };
-
-    case "rename":
-      // Rename fields
+    }
+    case "rename": {
       const mappings = config.mappings as Record<string, string>;
       const renamed: Record<string, unknown> = { ...input };
       for (const [from, to] of Object.entries(mappings || {})) {
-        if (from in renamed) {
-          renamed[to] = renamed[from];
-          delete renamed[from];
-        }
+        if (from in renamed) { renamed[to] = renamed[from]; delete renamed[from]; }
       }
       return { success: true, output: renamed };
-
+    }
     default:
       return { success: true, output: input };
   }
 }
 
-/**
- * Loop nodes iterate over an array in the input.
- * Simplified version — processes items sequentially.
- */
 async function executeLoop(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
   const iterateOver = config.iterateOver as string;
   const items = input[iterateOver];
-
   if (!Array.isArray(items)) {
-    return {
-      success: false,
-      output: {},
-      error: `Expected array at '${iterateOver}', got ${typeof items}`,
-    };
+    return { success: false, output: {}, error: `Expected array at '${iterateOver}', got ${typeof items}` };
   }
-
-  return {
-    success: true,
-    output: {
-      items,
-      itemCount: items.length,
-      iteratedOver: iterateOver,
-    },
-  };
+  return { success: true, output: { items, itemCount: items.length, iteratedOver: iterateOver } };
 }

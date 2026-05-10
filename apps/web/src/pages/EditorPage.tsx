@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useWorkflow, useExecutions } from '@/hooks'
+import { useWorkflow, useExecutions, useSSE } from '@/hooks'
 import { workflowsApi, nodesApi } from '@/lib/api'
-import { useWorkflowStore } from '@/lib/store'
+import { useWorkflowStore, useExecutionLiveStore } from '@/lib/store'
 import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
@@ -10,13 +10,13 @@ import type { NodeType, WorkflowExecution, ExecutionStatus } from '@/types'
 import styles from './EditorPage.module.css'
 
 const STATUS_COLOR: Record<ExecutionStatus, string> = {
-  pending:    'rgba(240,240,240,0.4)',
-  queued:     'rgba(240,240,240,0.5)',
-  running:    'rgba(240,240,240,0.9)',
-  completed:  'rgba(80,200,140,0.9)',
-  failed:     'rgba(220,80,80,0.85)',
-  cancelled:  'rgba(200,160,60,0.7)',
-  timed_out:  'rgba(220,80,80,0.7)',
+  pending:   'rgba(255,255,255,0.3)',
+  queued:    'rgba(255,255,255,0.4)',
+  running:   'rgba(255,255,255,0.9)',
+  completed: 'rgba(80,200,140,0.9)',
+  failed:    'rgba(232,57,42,0.85)',
+  cancelled: 'rgba(200,160,60,0.7)',
+  timed_out: 'rgba(232,57,42,0.7)',
 }
 
 export function EditorPage() {
@@ -25,11 +25,15 @@ export function EditorPage() {
   const { workflow, loading, error, refetch } = useWorkflow(id)
   const { executions, refetch: refetchExec }  = useExecutions(id)
   const { updateWorkflow }                    = useWorkflowStore()
+  const { activeExecutionId, nodeStatuses, setActiveExecution, reset } = useExecutionLiveStore()
 
   const [activating,  setActivating]  = useState(false)
   const [executing,   setExecuting]   = useState(false)
   const [showAddNode, setShowAddNode] = useState(false)
   const [panelOpen,   setPanelOpen]   = useState(true)
+
+  // Wire SSE — subscribes to the active execution's stream
+  useSSE(activeExecutionId)
 
   async function handleActivate() {
     if (!workflow) return
@@ -45,9 +49,14 @@ export function EditorPage() {
   async function handleExecute() {
     if (!workflow) return
     setExecuting(true)
+    reset() // clear previous execution status from nodes
     try {
-      await workflowsApi.execute(workflow.id)
-      refetchExec()
+      const res = await workflowsApi.execute(workflow.id)
+      if (res.success && res.data) {
+        // Start watching this execution via SSE
+        setActiveExecution(res.data.executionId)
+        refetchExec()
+      }
     } finally {
       setExecuting(false)
     }
@@ -72,6 +81,10 @@ export function EditorPage() {
     )
   }
 
+  const liveExecution = activeExecutionId
+    ? executions.find(e => e.id === activeExecutionId)
+    : null
+
   return (
     <div className={styles.page}>
       {/* ── Editor topbar ── */}
@@ -86,43 +99,55 @@ export function EditorPage() {
             <span className={styles.chipDot} />
             {workflow.status}
           </span>
+
+          {/* Live execution indicator */}
+          {activeExecutionId && liveExecution?.status === 'running' && (
+            <span className={styles.liveChip}>
+              <span className={styles.liveDot} />
+              Running
+            </span>
+          )}
+          {activeExecutionId && liveExecution?.status === 'completed' && (
+            <span className={clsx(styles.liveChip, styles.liveChipDone)}>
+              ✓ Completed
+            </span>
+          )}
+          {activeExecutionId && liveExecution?.status === 'failed' && (
+            <span className={clsx(styles.liveChip, styles.liveChipFail)}>
+              ✗ Failed
+            </span>
+          )}
         </div>
 
         <div className={styles.topRight}>
           <button className={styles.iconBtn} onClick={() => setShowAddNode(true)} title="Add node">
             <PlusIcon />
           </button>
-          <button className={styles.iconBtn} onClick={() => setPanelOpen((p) => !p)} title="Toggle executions">
+          <button className={styles.iconBtn} onClick={() => setPanelOpen(p => !p)} title="Toggle panel">
             <PanelIcon />
           </button>
-
+          {activeExecutionId && (
+            <button className={clsx(styles.btn, styles.clearBtn)} onClick={reset} title="Clear execution state">
+              Clear
+            </button>
+          )}
           {workflow.status === 'draft' && (
-            <button
-              className={clsx(styles.btn, styles.activateBtn)}
-              onClick={handleActivate}
-              disabled={activating}
-            >
+            <button className={clsx(styles.btn, styles.activateBtn)} onClick={handleActivate} disabled={activating}>
               {activating ? <MiniSpinner /> : 'Activate'}
             </button>
           )}
-
           {workflow.status === 'active' && (
-            <button
-              className={clsx(styles.btn, styles.runBtn)}
-              onClick={handleExecute}
-              disabled={executing}
-            >
+            <button className={clsx(styles.btn, styles.runBtn)} onClick={handleExecute} disabled={executing}>
               {executing ? <MiniSpinner /> : '▶ Run now'}
             </button>
           )}
-
           <button className={clsx(styles.btn, styles.primaryBtn)} onClick={refetch}>
             Refresh
           </button>
         </div>
       </div>
 
-      {/* ── Main area: Canvas + Executions panel ── */}
+      {/* ── Main: Canvas + Panel ── */}
       <div className={styles.body}>
         <WorkflowCanvas workflow={workflow} onRefetch={refetch} />
 
@@ -130,14 +155,30 @@ export function EditorPage() {
           <div className={styles.panel}>
             <div className={styles.panelHeader}>
               <span className={styles.panelTitle}>Recent executions</span>
-              <button
-                className={styles.panelRefresh}
-                onClick={refetchExec}
-                title="Refresh"
-              >
+              <button className={styles.panelRefresh} onClick={refetchExec} title="Refresh">
                 <RefreshIcon />
               </button>
             </div>
+
+            {/* Live node status summary */}
+            {activeExecutionId && Object.keys(nodeStatuses).length > 0 && (
+              <div className={styles.liveStatus}>
+                <div className={styles.liveStatusTitle}>Live node statuses</div>
+                {Object.entries(nodeStatuses).map(([nodeId, status]) => (
+                  <div key={nodeId} className={styles.liveStatusRow}>
+                    <div className={styles.liveStatusDot} style={{
+                      background: status === 'completed' ? 'rgba(80,200,140,0.9)'
+                        : status === 'failed' ? 'rgba(232,57,42,0.85)'
+                        : status === 'running' ? 'rgba(255,255,255,0.9)'
+                        : 'rgba(255,255,255,0.3)',
+                      boxShadow: status === 'running' ? '0 0 8px rgba(255,255,255,0.5)' : 'none',
+                    }} />
+                    <span className={styles.liveStatusNode}>{nodeId.slice(0, 8)}…</span>
+                    <span className={styles.liveStatusVal}>{status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {executions.length === 0 ? (
               <div className={styles.panelEmpty}>
@@ -147,7 +188,12 @@ export function EditorPage() {
             ) : (
               <div className={styles.executionList}>
                 {executions.map((ex) => (
-                  <ExecutionRow key={ex.id} execution={ex} />
+                  <ExecutionRow
+                    key={ex.id}
+                    execution={ex}
+                    isActive={ex.id === activeExecutionId}
+                    onSelect={() => setActiveExecution(ex.id)}
+                  />
                 ))}
               </div>
             )}
@@ -168,16 +214,26 @@ export function EditorPage() {
 }
 
 /* ── Execution Row ── */
-function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
+function ExecutionRow({ execution, isActive, onSelect }: {
+  execution: WorkflowExecution
+  isActive: boolean
+  onSelect: () => void
+}) {
   const dot = STATUS_COLOR[execution.status]
   const dur = execution.startedAt && execution.completedAt
-    ? Math.round((new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime()))
+    ? Math.round(new Date(execution.completedAt).getTime() - new Date(execution.startedAt).getTime())
     : null
 
   return (
-    <div className={styles.execRow}>
-      <div className={styles.execDot} style={{ background: dot,
-        boxShadow: execution.status === 'running' ? `0 0 8px ${dot}` : 'none' }} />
+    <div
+      className={clsx(styles.execRow, isActive && styles.execRowActive)}
+      onClick={onSelect}
+      title="Click to watch this execution"
+    >
+      <div className={styles.execDot} style={{
+        background: dot,
+        boxShadow: execution.status === 'running' ? `0 0 8px ${dot}` : 'none',
+      }} />
       <div className={styles.execInfo}>
         <div className={styles.execId}>{execution.id.slice(0, 8)}…</div>
         <div className={styles.execTime}>
@@ -185,9 +241,7 @@ function ExecutionRow({ execution }: { execution: WorkflowExecution }) {
         </div>
       </div>
       <div className={styles.execRight}>
-        {dur !== null && (
-          <span className={styles.execDur}>{dur}ms</span>
-        )}
+        {dur !== null && <span className={styles.execDur}>{dur}ms</span>}
         <span className={clsx(styles.execStatus, styles[`execStatus_${execution.status}`])}>
           {execution.status}
         </span>
@@ -228,12 +282,8 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
         retryPolicy: { maxRetries: 3, backoffMs: 1000, backoffMultiplier: 2 },
         timeoutMs: 30000,
       })
-      if (res.success) {
-        onAdded()
-        onClose()
-      } else {
-        setError(res.error ?? 'Failed to add node')
-      }
+      if (res.success) { onAdded(); onClose() }
+      else setError(res.error ?? 'Failed to add node')
     } catch {
       setError('Failed to add node')
     } finally {
@@ -243,14 +293,12 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Add node</h2>
           <button className={styles.modalClose} onClick={onClose}><CloseIcon /></button>
         </div>
-
         {error && <div className={styles.modalError}>{error}</div>}
-
         <div className={styles.field}>
           <label className={styles.fieldLabel}>Node name</label>
           <input
@@ -258,15 +306,14 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
             type="text"
             placeholder="e.g. Send Slack message"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={e => setName(e.target.value)}
             autoFocus
           />
         </div>
-
         <div className={styles.field}>
           <label className={styles.fieldLabel}>Node type</label>
           <div className={styles.typeGrid}>
-            {NODE_TYPES.map((nt) => (
+            {NODE_TYPES.map(nt => (
               <button
                 key={nt.type}
                 className={clsx(styles.typeCard, type === nt.type && styles.typeCardActive)}
@@ -278,14 +325,9 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
             ))}
           </div>
         </div>
-
         <div className={styles.modalFooter}>
           <button className={styles.cancelBtn} onClick={onClose}>Cancel</button>
-          <button
-            className={styles.submitBtn}
-            onClick={handleCreate}
-            disabled={loading || !name.trim()}
-          >
+          <button className={styles.submitBtn} onClick={handleCreate} disabled={loading || !name.trim()}>
             {loading ? <MiniSpinner /> : 'Add node'}
           </button>
         </div>
@@ -295,26 +337,9 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
 }
 
 /* ── Icons ── */
-function ChevronIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11L5 7l4-4" /></svg>
-}
-
-function PlusIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M7 2v10M2 7h10" /></svg>
-}
-
-function PanelIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="1.5" width="11" height="11" rx="2" /><path d="M9.5 1.5v11" /></svg>
-}
-
-function RefreshIcon() {
-  return <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 6.5A4.5 4.5 0 112 6.5M11 2.5V6.5H7" /></svg>
-}
-
-function CloseIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 2l10 10M12 2L2 12" /></svg>
-}
-
-function MiniSpinner() {
-  return <span className={styles.miniSpinner} />
-}
+function ChevronIcon() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11L5 7l4-4"/></svg> }
+function PlusIcon() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg> }
+function PanelIcon() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><rect x="1.5" y="1.5" width="11" height="11" rx="2"/><path d="M9.5 1.5v11"/></svg> }
+function RefreshIcon() { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M11 6.5A4.5 4.5 0 112 6.5M11 2.5V6.5H7"/></svg> }
+function CloseIcon() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 2l10 10M12 2L2 12"/></svg> }
+function MiniSpinner() { return <span className={styles.miniSpinner} /> }

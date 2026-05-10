@@ -1,44 +1,48 @@
-import { Queue } from "bullmq";
-import {
-  ExecutionJobData,
-  StepJobData,
-  DeadLetterJobData,
-  JOB_NAMES,
-} from "./jobs";
+import { createExecutionQueue, createStepQueue } from './queues';
+import { Queue } from 'bullmq';
+import { injectContext } from '@synchive/telemetry';
+import type { TraceCarrier } from '@synchive/telemetry';
+import type { ExecutionJobData, StepJobData, DeadLetterJobData } from './jobs';
 
-export async function enqueueExecution(
-  queue: Queue,
-  data: ExecutionJobData
-): Promise<string> {
-  const job = await queue.add(JOB_NAMES.EXECUTE_WORKFLOW, data, {
-    jobId: `exec-${data.executionId}`, // deterministic ID prevents duplicates
-    priority: 1,
-  });
+// Re-export TraceCarrier so queue/index.ts can re-export it
+export type { TraceCarrier };
 
-  return job.id!;
+// Lazy — only created when first needed, by which time .env is loaded
+let executionQueue: Queue | null = null;
+let stepQueue: Queue | null = null;
+
+function getExecutionQueue(): Queue {
+  if (!executionQueue) executionQueue = createExecutionQueue();
+  return executionQueue;
 }
 
-export async function enqueueStep(
-  queue: Queue,
-  data: StepJobData,
-  delayMs?: number
-): Promise<string> {
-  const job = await queue.add(JOB_NAMES.EXECUTE_STEP, data, {
+function getStepQueue(): Queue {
+  if (!stepQueue) stepQueue = createStepQueue();
+  return stepQueue;
+}
+
+export async function enqueueExecution(data: Omit<ExecutionJobData, 'traceContext'>): Promise<void> {
+  const jobData: ExecutionJobData = {
+    ...data,
+    traceContext: injectContext(),
+  };
+  await getExecutionQueue().add('execute-workflow', jobData, {
+    jobId: `exec-${data.executionId}`,
+    attempts: 1,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 50 },
+  });
+}
+
+export async function enqueueStep(data: Omit<StepJobData, 'traceContext'>): Promise<void> {
+  const jobData: StepJobData = {
+    ...data,
+    traceContext: injectContext(),
+  };
+  await getStepQueue().add('execute-step', jobData, {
     jobId: `step-${data.executionId}-${data.nodeId}-${data.attempt}`,
-    delay: delayMs, // used for retry backoff
-    priority: 1,
+    attempts: 1,
+    removeOnComplete: { count: 200 },
+    removeOnFail: { count: 100 },
   });
-
-  return job.id!;
-}
-
-export async function enqueueDeadLetter(
-  queue: Queue,
-  data: DeadLetterJobData
-): Promise<string> {
-  const job = await queue.add(JOB_NAMES.DEAD_LETTER, data, {
-    jobId: `dlq-${data.originalJobId}-${Date.now()}`,
-  });
-
-  return job.id!;
 }

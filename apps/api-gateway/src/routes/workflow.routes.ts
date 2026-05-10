@@ -18,7 +18,6 @@ import {
   createEdgeSchema,
 } from "../utils/schemas";
 import { db } from "../services/db.service";
-import { executionQueue } from "../services/queue.service";
 import { enqueueExecution, ExecutionJobData } from "@synchive/queue";
 import { AppError } from "../middleware/error-handler";
 
@@ -57,7 +56,7 @@ workflowRouter.get(
   "/:workflowId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       const [workflow] = await db
         .select()
@@ -135,7 +134,7 @@ workflowRouter.patch(
   validate(updateWorkflowSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       const [updated] = await db
         .update(workflows)
@@ -172,7 +171,7 @@ workflowRouter.delete(
   "/:workflowId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       const [deleted] = await db
         .delete(workflows)
@@ -206,7 +205,7 @@ workflowRouter.post(
   "/:workflowId/activate",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       // Verify ownership
       const [workflow] = await db
@@ -325,7 +324,7 @@ workflowRouter.post(
   validate(createNodeSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       // Verify workflow ownership
       const [workflow] = await db
@@ -381,7 +380,8 @@ workflowRouter.patch(
   validate(updateNodeSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId, nodeId } = req.params;
+      const workflowId = req.params.workflowId as string;
+      const nodeId = req.params.nodeId as string;
 
       // Verify workflow ownership
       const [workflow] = await db
@@ -431,7 +431,8 @@ workflowRouter.delete(
   "/:workflowId/nodes/:nodeId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId, nodeId } = req.params;
+      const workflowId = req.params.workflowId as string;
+      const nodeId = req.params.nodeId as string;
 
       // Verify workflow ownership
       const [workflow] = await db
@@ -485,7 +486,7 @@ workflowRouter.post(
   validate(createEdgeSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       // Verify workflow ownership
       const [workflow] = await db
@@ -563,7 +564,8 @@ workflowRouter.delete(
   "/:workflowId/edges/:edgeId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId, edgeId } = req.params;
+      const workflowId = req.params.workflowId as string;
+      const edgeId = req.params.edgeId as string;
 
       // Verify workflow ownership
       const [workflow] = await db
@@ -614,7 +616,7 @@ workflowRouter.post(
   "/:workflowId/execute",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       // Load workflow and verify ownership + active status
       const [workflow] = await db
@@ -682,7 +684,7 @@ workflowRouter.post(
         triggerData,
       };
 
-      await enqueueExecution(executionQueue, jobData);
+      await enqueueExecution(jobData);
 
       // Update execution status to queued
       await db
@@ -712,7 +714,7 @@ workflowRouter.get(
   "/:workflowId/executions",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { workflowId } = req.params;
+      const workflowId = req.params.workflowId as string;
 
       // Verify ownership
       const [workflow] = await db

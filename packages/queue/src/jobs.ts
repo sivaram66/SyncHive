@@ -1,24 +1,20 @@
+// TraceCarrier is a plain string map — no circular dependency on @synchive/telemetry
+export type TraceCarrier = Record<string, string>;
+
 export interface ExecutionJobData {
   executionId: string;
   workflowId: string;
   versionId: string;
-  triggerData: Record<string, unknown>;
+  triggeredBy?: 'manual' | 'webhook' | 'schedule';
+  triggerData?: Record<string, unknown>;
+  traceContext?: TraceCarrier;
 }
 
 export interface StepJobData {
   executionId: string;
   nodeId: string;
-  nodeName: string;
-  nodeType: string;
-  nodeConfig: Record<string, unknown>;
-  input: Record<string, unknown>;
-  retryPolicy: {
-    maxRetries: number;
-    backoffMs: number;
-    backoffMultiplier: number;
-  };
-  timeoutMs: number;
   attempt: number;
+  traceContext?: TraceCarrier;
 }
 
 export interface DeadLetterJobData {
@@ -33,7 +29,7 @@ export interface DeadLetterJobData {
 
 // Job names for type-safe event handling
 export const JOB_NAMES = {
-  EXECUTE_WORKFLOW: "execute-workflow",
-  EXECUTE_STEP: "execute-step",
-  DEAD_LETTER: "dead-letter",
+  EXECUTE_WORKFLOW: 'execute-workflow',
+  EXECUTE_STEP: 'execute-step',
+  DEAD_LETTER: 'dead-letter',
 } as const;

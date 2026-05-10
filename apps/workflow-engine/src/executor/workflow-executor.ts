@@ -1,369 +1,348 @@
-import { eq } from "drizzle-orm";
+import { eq } from 'drizzle-orm';
+import { createDb  } from '@synchive/db';
+import { workflowVersions, workflowExecutions, stepExecutions } from '@synchive/db';
+import { WorkflowSnapshot, SnapshotNode } from '@synchive/shared-types';
+import { buildDAG, topologicalSort } from './dag';
+import { executeNode } from './node-executor';
+import { publishExecutionEvent } from '@synchive/queue';
+import { createLogger } from '@synchive/logger';
+const logger = createLogger({ service: 'workflow-engine' });
 import {
-  workflowExecutions,
-  stepExecutions,
-  workflowVersions,
-} from "@synchive/db";
-import {
-  WorkflowSnapshot,
-  ExecutionStatus,
-  StepStatus,
-} from "@synchive/shared-types";
-import { ExecutionJobData } from "@synchive/queue";
-import {
-  createLogger,
-  createExecutionLogger,
-} from "@synchive/logger";
-import { createDb } from "@synchive/db";
-import { config } from "../config";
-import { buildDAG, getNextNodes, DAGGraph } from "./dag";
-import { evaluateCondition } from "./condition-evaluator";
-import { executeNode, NodeExecutionResult } from "./node-executor";
+  getTracer,
+  SpanAttributes,
+  SpanStatusCode,
+  SpanKind,
+} from '@synchive/telemetry';
 
-const logger = createLogger({ service: "workflow-engine" });
-const db = createDb(config.databaseUrl);
+const tracer = getTracer('workflow-engine');
 
-export async function executeWorkflow(
-  jobData: ExecutionJobData
-): Promise<void> {
-  const execLogger = createExecutionLogger(logger, {
-    executionId: jobData.executionId,
-    workflowId: jobData.workflowId,
-  });
+export interface ExecuteWorkflowInput {
+  executionId: string;
+  workflowId: string;
+  versionId: string;
+  triggeredBy: 'manual' | 'webhook' | 'schedule';
+  triggerData?: Record<string, unknown>;
+}
 
-  const startTime = Date.now();
+/**
+ * Top-level workflow orchestrator.
+ *
+ * Span hierarchy produced by this function:
+ *
+ *   workflow-engine.process-job          (worker/index.ts)
+ *     └── workflow-engine.execute        (this function)
+ *           ├── workflow-engine.execute-node  (node 1)
+ *           ├── workflow-engine.execute-node  (node 2 — parallel)
+ *           └── workflow-engine.execute-node  (node 3)
+ *
+ * Each node span carries nodeId, nodeType, nodeName, attempt number.
+ * Failed nodes record the exception and set SpanStatusCode.ERROR.
+ * Retried nodes produce one span per attempt.
+ */
+export async function executeWorkflow(input: ExecuteWorkflowInput): Promise<void> {
+  const { executionId, workflowId, versionId, triggeredBy, triggerData } = input;
+  const db = createDb(process.env.DATABASE_URL!);
 
-  try {
-    // Update execution status to running
-    await db
-      .update(workflowExecutions)
-      .set({ status: "running", startedAt: new Date() })
-      .where(eq(workflowExecutions.id, jobData.executionId));
+  return tracer.startActiveSpan(
+    'workflow-engine.execute',
+    {
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        [SpanAttributes.EXECUTION_ID]: executionId,
+        [SpanAttributes.WORKFLOW_ID]: workflowId,
+        [SpanAttributes.VERSION_ID]: versionId,
+        [SpanAttributes.EXECUTION_TRIGGER]: triggeredBy,
+      },
+    },
+    async (workflowSpan) => {
+      try {
+        // Mark execution as running
+        await db
+          .update(workflowExecutions)
+          .set({ status: 'running', startedAt: new Date() })
+          .where(eq(workflowExecutions.id, executionId));
 
-    execLogger.executionStarted(jobData.triggerData);
+        await publishExecutionEvent({
+          type: 'execution:started',
+          executionId,
+          workflowId,
+          data: { status: 'running' },
+          timestamp: new Date().toISOString(),
+        });
 
-    // Load the version snapshot
-    const [version] = await db
-      .select()
-      .from(workflowVersions)
-      .where(eq(workflowVersions.id, jobData.versionId))
-      .limit(1);
+        // Load the frozen version snapshot
+        const [version] = await db
+          .select()
+          .from(workflowVersions)
+          .where(eq(workflowVersions.id, versionId));
 
-    if (!version) {
-      throw new Error(`Version ${jobData.versionId} not found`);
-    }
+        if (!version) throw new Error(`Version ${versionId} not found`);
 
-    const snapshot = version.snapshot as unknown as WorkflowSnapshot;
+        const snapshot = version.snapshot as WorkflowSnapshot;
+        workflowSpan.setAttribute(SpanAttributes.WORKFLOW_NAME, workflowId);
 
-    // Build the DAG
-    const dag = buildDAG(snapshot);
+        // Build the DAG and find execution levels
+        const dag = buildDAG(snapshot);
+        const levels = topologicalSort(dag);
 
-    if (dag.entryNodes.length === 0) {
-      throw new Error("Workflow has no entry nodes");
-    }
+        // Node output accumulator — later nodes can reference earlier outputs
+        const nodeOutputs: Record<string, unknown> = {};
+        if (triggerData) nodeOutputs['__trigger__'] = triggerData;
 
-    // Execute the DAG
-    const completedNodes = new Set<string>();
-    const nodeOutputs = new Map<string, Record<string, unknown>>();
-    const failedNodes = new Set<string>();
+        let executionFailed = false;
 
-    // Start with entry nodes
-    let currentNodes = [...dag.entryNodes];
+        // Execute level by level. Within each level, nodes run in parallel.
+        for (const level of levels) {
+          if (executionFailed) break;
 
-    while (currentNodes.length > 0) {
-      // Execute all current nodes (these can run in parallel)
-      const results = await Promise.allSettled(
-        currentNodes.map((nodeId) =>
-          executeNodeWithTracking(
-            jobData.executionId,
-            dag,
-            nodeId,
-            nodeOutputs,
-            jobData.triggerData
-          )
-        )
-      );
+          const levelResults = await Promise.allSettled(
+            level.map((nodeId) => {
+              const node = snapshot.nodes.find((n) => n.id === nodeId);
+              if (!node) return Promise.resolve();
+              return executeNodeWithSpan({ node, executionId, workflowId, nodeOutputs, snapshot, db });
+            })
+          );
 
-      // Process results
-      const nextNodes: string[] = [];
-
-      for (let i = 0; i < results.length; i++) {
-        const nodeId = currentNodes[i];
-        const result = results[i];
-
-        if (result.status === "fulfilled" && result.value.success) {
-          completedNodes.add(nodeId);
-          nodeOutputs.set(nodeId, result.value.output);
-
-          // Find next executable nodes
-          const candidates = getNextNodes(dag, nodeId, completedNodes);
-
-          for (const candidateId of candidates) {
-            // Check edge conditions
-            const dagNode = dag.nodes.get(candidateId)!;
-            const allEdgesPassed = dagNode.incomingEdges.every((edge) => {
-              if (edge.sourceNodeId !== nodeId) return true; // only check edges from the just-completed node
-              const sourceOutput = nodeOutputs.get(edge.sourceNodeId) || {};
-              return evaluateCondition(edge.conditionExpression, sourceOutput);
-            });
-
-            if (allEdgesPassed && !nextNodes.includes(candidateId)) {
-              nextNodes.push(candidateId);
+          for (const result of levelResults) {
+            if (result.status === 'rejected') {
+              executionFailed = true;
+              logger.error({ err: result.reason }, 'node execution failed');
             }
           }
+
+          // Collect outputs from completed nodes
+          for (const nodeId of level) {
+            if (nodeOutputs[nodeId] !== undefined) continue; // already set
+            // outputs are set inside executeNodeWithSpan via nodeOutputs ref
+          }
+        }
+
+        if (executionFailed) {
+          await db
+            .update(workflowExecutions)
+            .set({ status: 'failed', completedAt: new Date() })
+            .where(eq(workflowExecutions.id, executionId));
+          workflowSpan.setStatus({ code: SpanStatusCode.ERROR, message: 'One or more nodes failed' });
+          await publishExecutionEvent({
+            type: 'execution:failed',
+            executionId,
+            workflowId,
+            data: { status: 'failed' },
+            timestamp: new Date().toISOString(),
+          });
         } else {
-          failedNodes.add(nodeId);
-          const error =
-            result.status === "rejected"
-              ? result.reason?.message
-              : result.value.error;
-
-          logger.error(
-            {
-              nodeId,
-              error,
-              executionId: jobData.executionId,
-            },
-            "Node execution failed permanently"
-          );
+          await db
+            .update(workflowExecutions)
+            .set({ status: 'completed', completedAt: new Date() })
+            .where(eq(workflowExecutions.id, executionId));
+          workflowSpan.setStatus({ code: SpanStatusCode.OK });
+          await publishExecutionEvent({
+            type: 'execution:completed',
+            executionId,
+            workflowId,
+            data: { status: 'completed' },
+            timestamp: new Date().toISOString(),
+          });
         }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        workflowSpan.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+        workflowSpan.recordException(error);
+
+        await db
+          .update(workflowExecutions)
+          .set({ status: 'failed', completedAt: new Date() })
+          .where(eq(workflowExecutions.id, executionId));
+
+        // Best-effort publish — don't let telemetry failure mask the real error
+        publishExecutionEvent({
+          type: 'execution:failed',
+          executionId,
+          workflowId,
+          data: { status: 'failed', error: error.message },
+          timestamp: new Date().toISOString(),
+        }).catch(() => {});
+
+        throw err;
+      } finally {
+        workflowSpan.end();
       }
-
-      currentNodes = nextNodes;
     }
+  );
+}
 
-    // Determine final execution status
-    const durationMs = Date.now() - startTime;
-
-    if (failedNodes.size > 0) {
-      const errorMsg = `${failedNodes.size} node(s) failed: ${Array.from(failedNodes).join(", ")}`;
-
-      await db
-        .update(workflowExecutions)
-        .set({
-          status: "failed",
-          error: errorMsg,
-          completedAt: new Date(),
-          result: {
-            completedNodes: Array.from(completedNodes),
-            failedNodes: Array.from(failedNodes),
-            durationMs,
-          },
-        })
-        .where(eq(workflowExecutions.id, jobData.executionId));
-
-      execLogger.executionFailed(errorMsg, durationMs);
-    } else {
-      // Collect final output from terminal nodes (nodes with no outgoing edges)
-      const terminalOutputs: Record<string, unknown> = {};
-      for (const [nodeId, dagNode] of dag.nodes) {
-        if (dagNode.outgoingEdges.length === 0 && nodeOutputs.has(nodeId)) {
-          terminalOutputs[dagNode.node.name] = nodeOutputs.get(nodeId);
-        }
-      }
-
-      await db
-        .update(workflowExecutions)
-        .set({
-          status: "completed",
-          completedAt: new Date(),
-          result: {
-            completedNodes: Array.from(completedNodes),
-            outputs: terminalOutputs,
-            durationMs,
-          },
-        })
-        .where(eq(workflowExecutions.id, jobData.executionId));
-
-      execLogger.executionCompleted(durationMs);
-    }
-  } catch (error) {
-    const durationMs = Date.now() - startTime;
-    const errorMsg = error instanceof Error ? error.message : String(error);
-
-    await db
-      .update(workflowExecutions)
-      .set({
-        status: "failed",
-        error: errorMsg,
-        completedAt: new Date(),
-      })
-      .where(eq(workflowExecutions.id, jobData.executionId));
-
-    execLogger.executionFailed(errorMsg, durationMs);
-    throw error; // re-throw for BullMQ to handle
-  }
+interface ExecuteNodeWithSpanInput {
+  node: SnapshotNode;
+  executionId: string;
+  workflowId: string;
+  nodeOutputs: Record<string, unknown>;
+  snapshot: WorkflowSnapshot;
+  db: ReturnType<typeof createDb>;
 }
 
 /**
- * Execute a single node with full tracking:
- * - Create step_execution record
- * - Resolve input from parent outputs
- * - Handle retries with backoff
- * - Update step status
+ * Executes a single node and wraps it in an OTel span.
+ *
+ * Each attempt (for retried nodes) produces its own span. This is intentional:
+ * you can see in Jaeger exactly how many attempts a node took and how long
+ * each backoff wait was.
  */
-async function executeNodeWithTracking(
-  executionId: string,
-  dag: DAGGraph,
-  nodeId: string,
-  nodeOutputs: Map<string, Record<string, unknown>>,
-  triggerData: Record<string, unknown>
-): Promise<NodeExecutionResult> {
-  const dagNode = dag.nodes.get(nodeId)!;
-  const node = dagNode.node;
+async function executeNodeWithSpan(input: ExecuteNodeWithSpanInput): Promise<void> {
+  const { node, executionId, workflowId, nodeOutputs, snapshot, db } = input;
 
-  const stepLogger = createExecutionLogger(logger, {
-    executionId,
-    workflowId: "",
-    nodeId: node.id,
-    nodeName: node.name,
-  });
-
-  // Resolve input: merge outputs from all parent nodes
-  let input: Record<string, unknown>;
-
-  if (dagNode.incomingEdges.length === 0) {
-    // Entry node — use trigger data
-    input = triggerData;
-  } else {
-    // Merge all parent outputs
-    input = {};
-    for (const edge of dagNode.incomingEdges) {
-      const parentOutput = nodeOutputs.get(edge.sourceNodeId);
-      if (parentOutput) {
-        Object.assign(input, parentOutput);
-      }
-    }
-  }
-
-  // Retry loop
-  const maxAttempts = node.retryPolicy.maxRetries + 1; // +1 for the initial attempt
-  let lastError: string = "";
+  const retryPolicy = node.retryPolicy ?? { maxRetries: 0, backoffMs: 1000, backoffMultiplier: 2 };
+  const maxAttempts = retryPolicy.maxRetries + 1;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // Create step execution record
-    const [stepExec] = await db
-      .insert(stepExecutions)
-      .values({
-        executionId,
-        nodeId: node.id,
-        status: "running",
-        input,
-        attempt,
-        startedAt: new Date(),
-      })
-      .returning();
+    const spanName = `workflow-engine.execute-node`;
 
-    stepLogger.stepStarted(node.type, input);
-
-    try {
-      // Execute with timeout
-      const result = await executeWithTimeout(
-        () => executeNode(node, input),
-        node.timeoutMs
-      );
-
-      if (result.success) {
-        // Update step as completed
-        await db
-          .update(stepExecutions)
-          .set({
-            status: "completed",
-            output: result.output,
-            completedAt: new Date(),
+    await tracer.startActiveSpan(
+      spanName,
+      {
+        kind: SpanKind.INTERNAL,
+        attributes: {
+          [SpanAttributes.NODE_ID]: node.id,
+          [SpanAttributes.NODE_TYPE]: node.type,
+          [SpanAttributes.NODE_NAME]: node.name ?? '',
+          [SpanAttributes.EXECUTION_ID]: executionId,
+          [SpanAttributes.STEP_ATTEMPT]: attempt,
+        },
+      },
+      async (nodeSpan) => {
+        // Create step_executions row for this attempt
+        const [stepRow] = await db
+          .insert(stepExecutions)
+          .values({
+            executionId,
+            nodeId: node.id,
+            attempt,
+            status: 'running',
+            startedAt: new Date(),
           })
-          .where(eq(stepExecutions.id, stepExec.id));
+          .returning();
 
-        stepLogger.stepCompleted(result.output, Date.now() - stepExec.startedAt!.getTime());
+        await publishExecutionEvent({
+          type: 'step:started',
+          executionId,
+          workflowId,
+          data: {
+            nodeId: node.id,
+            nodeName: node.name,
+            nodeType: node.type,
+            status: 'running',
+            attempt,
+          },
+          timestamp: new Date().toISOString(),
+        });
 
-        return result;
-      } else {
-        // Node returned failure
-        lastError = result.error || "Unknown error";
+        try {
+          const result = await executeNode(node, nodeOutputs);
 
-        await db
-          .update(stepExecutions)
-          .set({
-            status: "failed",
-            error: lastError,
-            completedAt: new Date(),
-          })
-          .where(eq(stepExecutions.id, stepExec.id));
+          // Store output so downstream nodes can reference it
+          nodeOutputs[node.id] = result.output;
 
-        const willRetry = attempt < maxAttempts;
-        stepLogger.stepFailed(lastError, willRetry);
+          const seen = new WeakSet()
+          const safeOutput = JSON.parse(JSON.stringify(result.output, (_, v) => {
+            if (typeof v === 'object' && v !== null) {
+              if (seen.has(v)) return '[Circular]'
+              seen.add(v)
+            }
+            return v
+          }))
 
-        if (willRetry) {
-          const delayMs =
-            node.retryPolicy.backoffMs *
-            Math.pow(node.retryPolicy.backoffMultiplier, attempt - 1);
-          stepLogger.stepRetrying(attempt + 1, delayMs);
-          await sleep(delayMs);
+          await db
+            .update(stepExecutions)
+            .set({ status: 'completed', output: safeOutput as any, completedAt: new Date() })
+            .where(eq(stepExecutions.id, stepRow.id));
+
+          await publishExecutionEvent({
+            type: 'step:completed',
+            executionId,
+            workflowId,
+            data: {
+              nodeId: node.id,
+              nodeName: node.name,
+              nodeType: node.type,
+              status: 'completed',
+              output: safeOutput as Record<string, unknown>,
+              attempt,
+            },
+            timestamp: new Date().toISOString(),
+          });
+
+          nodeSpan.setAttribute(SpanAttributes.STEP_STATUS, 'completed');
+          nodeSpan.setStatus({ code: SpanStatusCode.OK });
+          nodeSpan.end();
+          return; // success — exit retry loop
+
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          nodeSpan.recordException(error);
+
+          const isLastAttempt = attempt === maxAttempts;
+
+          if (isLastAttempt) {
+            await db
+              .update(stepExecutions)
+              .set({ status: 'failed', error: error.message, completedAt: new Date() })
+              .where(eq(stepExecutions.id, stepRow.id));
+
+            await publishExecutionEvent({
+              type: 'step:failed',
+              executionId,
+              workflowId,
+              data: {
+                nodeId: node.id,
+                nodeName: node.name,
+                nodeType: node.type,
+                status: 'failed',
+                error: error.message,
+                attempt,
+                willRetry: false,
+              },
+              timestamp: new Date().toISOString(),
+            });
+
+            nodeSpan.setAttribute(SpanAttributes.STEP_STATUS, 'failed');
+            nodeSpan.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+            nodeSpan.end();
+            throw err; // propagate — marks execution as failed
+          } else {
+            await db
+              .update(stepExecutions)
+              .set({ status: 'retrying', error: error.message })
+              .where(eq(stepExecutions.id, stepRow.id));
+
+            const backoffMs = retryPolicy.backoffMs * Math.pow(retryPolicy.backoffMultiplier, attempt - 1);
+
+            await publishExecutionEvent({
+              type: 'step:retrying',
+              executionId,
+              workflowId,
+              data: {
+                nodeId: node.id,
+                nodeName: node.name,
+                nodeType: node.type,
+                status: 'retrying',
+                error: error.message,
+                attempt,
+                willRetry: true,
+                nextAttemptMs: backoffMs,
+              },
+              timestamp: new Date().toISOString(),
+            });
+
+            nodeSpan.setAttribute(SpanAttributes.STEP_STATUS, 'retrying');
+            nodeSpan.setStatus({ code: SpanStatusCode.ERROR, message: `attempt ${attempt} failed, retrying` });
+            nodeSpan.end();
+
+            logger.info({ nodeId: node.id, attempt, backoffMs }, 'retrying node after backoff');
+            await sleep(backoffMs);
+          }
         }
       }
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : String(error);
-
-      const isTimeout = lastError.includes("timed out");
-      const status: StepStatus = isTimeout ? "timed_out" : "failed";
-
-      await db
-        .update(stepExecutions)
-        .set({
-          status,
-          error: lastError,
-          completedAt: new Date(),
-        })
-        .where(eq(stepExecutions.id, stepExec.id));
-
-      if (isTimeout) {
-        stepLogger.stepTimedOut(node.timeoutMs);
-      }
-
-      const willRetry = attempt < maxAttempts;
-      stepLogger.stepFailed(lastError, willRetry);
-
-      if (willRetry) {
-        const delayMs =
-          node.retryPolicy.backoffMs *
-          Math.pow(node.retryPolicy.backoffMultiplier, attempt - 1);
-        stepLogger.stepRetrying(attempt + 1, delayMs);
-        await sleep(delayMs);
-      }
-    }
+    );
   }
-
-  // All retries exhausted
-  return {
-    success: false,
-    output: {},
-    error: `Failed after ${maxAttempts} attempts. Last error: ${lastError}`,
-  };
-}
-
-/**
- * Execute a function with a timeout.
- * Throws if the function doesn't complete within timeoutMs.
- */
-function executeWithTimeout<T>(
-  fn: () => Promise<T>,
-  timeoutMs: number
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`Step execution timed out after ${timeoutMs}ms`));
-    }, timeoutMs);
-
-    fn()
-      .then((result) => {
-        clearTimeout(timer);
-        resolve(result);
-      })
-      .catch((error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-  });
 }
 
 function sleep(ms: number): Promise<void> {

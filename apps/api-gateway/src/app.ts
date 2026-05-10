@@ -9,7 +9,7 @@ import { authRouter } from "./routes/auth.routes";
 import { workflowRouter } from "./routes/workflow.routes";
 import { webhookRouter } from "./routes/webhook.routes";
 import { healthRouter } from "./routes/health.routes";
-
+import { executionRouter } from "./routes/execution.routes";
 export const app = express();
 
 // --------------- Security middleware ---------------
@@ -38,6 +38,6 @@ app.use("/health", healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/workflows", workflowRouter);
 app.use("/hooks", webhookRouter);
-
+app.use("/api/executions", executionRouter); 
 // --------------- Error handling ---------------
 app.use(errorHandler);

@@ -1,3 +1,5 @@
+import "./env"; 
+import './telemetry';
 import { createLogger } from "@synchive/logger";
 import { closeRedisConnection } from "@synchive/queue";
 import { startWorkers, stopWorkers } from "./workers";
@@ -15,19 +17,15 @@ async function main() {
       },
       "Starting workflow engine"
     );
-
     await startWorkers();
-
     logger.info("Workflow engine is running and listening for jobs");
   } catch (error) {
-    logger.fatal({ error }, "Failed to start workflow engine");
+    logger.fatal({ error: error instanceof Error ? { message: error.message, stack: error.stack } : error }, "Failed to start workflow engine");
     process.exit(1);
   }
 
-  // Graceful shutdown
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Shutdown signal received, draining workers...");
-
     try {
       await stopWorkers();
       await closeRedisConnection();

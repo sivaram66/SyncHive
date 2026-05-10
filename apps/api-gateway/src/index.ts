@@ -1,3 +1,4 @@
+import './telemetry';
 import { app } from "./app";
 import { config } from "./config";
 import { createLogger } from "@synchive/logger";
@@ -17,7 +18,6 @@ async function main() {
     process.exit(1);
   }
 
-  // Graceful shutdown
   const shutdown = async (signal: string) => {
     logger.info({ signal }, "Shutdown signal received");
     process.exit(0);
