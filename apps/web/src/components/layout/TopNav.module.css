@@ -1,175 +1,140 @@
 .nav {
-  height: 56px;
+  height: 52px;
+  min-height: 52px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 28px;
-  flex-shrink: 0;
-  z-index: 50;
-  transition: background 0.4s, border-color 0.4s;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-surface);
+  gap: 16px;
+  position: relative;
+  z-index: 10;
 }
 
-[data-theme='dark'] .nav, :root .nav {
-  background: rgba(4, 4, 4, 0.95);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-}
-
-/* Light mode — keep topnav dark for contrast */
-[data-theme='light'] .nav {
-  background: #111111;
-  border-color: rgba(255,255,255,0.08);
-}
-
-/* ── Logo ── */
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
+  flex-shrink: 0;
 }
-
 .gem {
-  width: 30px;
-  height: 30px;
-  background: var(--accent);
-  border-radius: 9px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 0 20px var(--accent-glow);
 }
-
-.gemInner {
-  width: 13px;
-  height: 13px;
-  background: #fff;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-}
-
 .brand {
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  /* Always white — nav is always dark */
-  color: #ffffff;
-}
-
-.tag {
-  font-size: 8.5px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  font-family: var(--mono);
+  color: var(--t1);
+  letter-spacing: -0.3px;
+}
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-light);
+  background: var(--accent-subtle);
+  border: 0.5px solid var(--accent-border);
   padding: 2px 7px;
-  border-radius: 5px;
-  color: rgba(255,255,255,0.4);
-  background: rgba(255,255,255,0.07);
-  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  letter-spacing: 0.04em;
 }
 
-/* ── Links ── */
+.divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-1);
+  flex-shrink: 0;
+}
+
 .links {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1;
 }
-
 .link {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
-  color: rgba(255,255,255,0.45);
-  padding: 6px 13px;
-  border-radius: 8px;
+  color: var(--t3);
   text-decoration: none;
-  transition: all 0.2s;
-  letter-spacing: -0.1px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: all 0.15s;
 }
-
 .link:hover {
-  color: #ffffff;
-  background: rgba(255,255,255,0.07);
+  color: var(--t2);
+  background: var(--glass2);
 }
 
-/* ── Right side ── */
 .right {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
 .themeBtn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.1);
+  background: none;
+  border: 0.5px solid var(--border-2);
+  color: var(--t3);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  color: rgba(255,255,255,0.5);
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
-
 .themeBtn:hover {
-  color: #ffffff;
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.15);
+  background: var(--glass2);
+  color: var(--t1);
+  border-color: var(--border-3);
 }
 
-/* ── User chip ── */
 .userChip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px 4px 4px;
+  gap: 7px;
+  padding: 4px 10px 4px 5px;
   border-radius: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 0.5px solid rgba(255,255,255,0.1);
+  border: 0.5px solid var(--border-2);
+  background: var(--glass);
+  cursor: default;
 }
-
 .avatar {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  font-weight: 800;
-  box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.userName {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.75);
-  letter-spacing: -0.1px;
-}
-
-/* ── CTA button ── */
-.cta {
-  height: 34px;
-  padding: 0 18px;
-  background: var(--accent);
-  border: none;
-  border-radius: 9px;
-  font-size: 12.5px;
   font-weight: 700;
-  color: #ffffff;
-  cursor: pointer;
-  font-family: var(--font);
-  letter-spacing: -0.1px;
-  transition: all 0.2s;
-  box-shadow: var(--btn-shadow);
+  color: #fff;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+.userName {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t2);
 }
 
+.cta {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: var(--glass2);
+  border: 0.5px solid var(--border-2);
+  color: var(--t3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
 .cta:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 0 32px var(--accent-glow), 0 4px 12px rgba(0,0,0,0.4);
+  background: var(--glass3);
+  color: var(--t2);
 }

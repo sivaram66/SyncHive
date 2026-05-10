@@ -1,13 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '@/lib/api'
-import { useAuthStore, useThemeStore } from '@/lib/store'
+import { useAuthStore } from '@/lib/store'
 import styles from './AuthPage.module.css'
 
 export function SignupPage() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
-  const { theme, toggleTheme } = useThemeStore()
 
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
@@ -38,27 +37,25 @@ export function SignupPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.orb1} />
-      <div className={styles.orb2} />
-
-      <button className={styles.themeBtn} onClick={toggleTheme} title="Toggle theme">
-        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      </button>
-
       <div className={styles.card}>
-        <div className={styles.logo}>
-          <div className={styles.gem}><div className={styles.gemInner} /></div>
-          <span className={styles.brand}>SyncHive</span>
+        <div className={styles.logoArea}>
+          <div className={styles.logoIcon}>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path d="M14 2L25 8v12L14 26 3 20V8L14 2z"
+                fill="rgba(124,58,237,0.2)" stroke="#7C3AED" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M14 8l7 4v8L14 24 7 20V12L14 8z" fill="#7C3AED" opacity="0.6"/>
+              <path d="M14 13v4M12 15h4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <span className={styles.logoName}>SyncHive</span>
+          <span className={styles.logoSub}>Create your workspace — it's free</span>
         </div>
 
-        <h1 className={styles.heading}>Create an account</h1>
-        <p className={styles.sub}>Start automating in minutes</p>
-
-        {error && <div className={styles.errorBanner}>{error}</div>}
+        {error && <div className={styles.errorBox}>{error}</div>}
 
         <form className={styles.form} onSubmit={handleSubmit}>
-          <div className={styles.field}>
-            <label className={styles.label}>Name</label>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Full name</label>
             <input
               className={styles.input}
               type="text"
@@ -70,8 +67,8 @@ export function SignupPage() {
             />
           </div>
 
-          <div className={styles.field}>
-            <label className={styles.label}>Email</label>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Email address</label>
             <input
               className={styles.input}
               type="email"
@@ -83,7 +80,7 @@ export function SignupPage() {
             />
           </div>
 
-          <div className={styles.field}>
+          <div className={styles.fieldGroup}>
             <label className={styles.label}>Password</label>
             <input
               className={styles.input}
@@ -98,34 +95,15 @@ export function SignupPage() {
           </div>
 
           <button className={styles.submitBtn} type="submit" disabled={loading}>
-            {loading ? <span className={styles.spinner} /> : 'Create account'}
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
         <p className={styles.footer}>
           Already have an account?{' '}
-          <Link to="/login" className={styles.footerLink}>Sign in</Link>
+          <Link to="/login" className={styles.link}>Sign in</Link>
         </p>
       </div>
     </div>
-  )
-}
-
-function SunIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor"
-      strokeWidth="1.3" strokeLinecap="round">
-      <circle cx="7" cy="7" r="2.8" />
-      <path d="M7 1v1.2M7 11.8V13M1 7h1.2M11.8 7H13M2.76 2.76l.85.85M10.39 10.39l.85.85M2.76 11.24l.85-.85M10.39 3.61l.85-.85" />
-    </svg>
-  )
-}
-
-function MoonIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor"
-      strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10.5 5.5A5 5 0 114 11a3.8 3.8 0 006.5-5.5z" />
-    </svg>
   )
 }

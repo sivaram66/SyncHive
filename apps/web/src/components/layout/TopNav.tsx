@@ -9,11 +9,18 @@ export function TopNav() {
     <nav className={styles.nav}>
       <div className={styles.logo}>
         <div className={styles.gem}>
-          <div className={styles.gemInner} />
+          <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+            <path d="M13 2L22 7v12L13 24 4 19V7L13 2z"
+              fill="rgba(124,58,237,0.15)" stroke="#7C3AED" strokeWidth="1.2" strokeLinejoin="round"/>
+            <path d="M13 7l5 3v6L13 19 8 16V10L13 7z" fill="#7C3AED" opacity="0.5"/>
+            <path d="M13 11v3M11.5 12.5h3" stroke="#A78BFA" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
         </div>
         <span className={styles.brand}>SyncHive</span>
         <span className={styles.tag}>Engine</span>
       </div>
+
+      <div className={styles.divider} />
 
       <div className={styles.links}>
         <a className={styles.link} href="https://github.com" target="_blank" rel="noreferrer">Docs</a>
