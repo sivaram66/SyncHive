@@ -42,8 +42,8 @@ export function SignupPage() {
           <div className={styles.logoIcon}>
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
               <path d="M14 2L25 8v12L14 26 3 20V8L14 2z"
-                fill="rgba(124,58,237,0.2)" stroke="#7C3AED" strokeWidth="1.4" strokeLinejoin="round"/>
-              <path d="M14 8l7 4v8L14 24 7 20V12L14 8z" fill="#7C3AED" opacity="0.6"/>
+                fill="rgba(37,99,235,0.2)" stroke="#2563EB" strokeWidth="1.4" strokeLinejoin="round"/>
+              <path d="M14 8l7 4v8L14 24 7 20V12L14 8z" fill="#2563EB" opacity="0.6"/>
               <path d="M14 13v4M12 15h4" stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
           </div>
