@@ -47,7 +47,18 @@ export function EditorPage() {
     setActivating(true)
     try {
       const res = await workflowsApi.activate(workflow.id)
-      if (res.success && res.data) updateWorkflow(workflow.id, { status: res.data.status })
+      if (res.success && res.data) {
+        updateWorkflow(workflow.id, { status: res.data.status })
+      } else {
+        alert(`Cannot activate: ${res.error ?? 'Unknown error'}`)
+      }
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string; message?: string } } })
+        ?.response?.data?.error
+        ?? (err as { response?: { data?: { error?: string; message?: string } } })
+          ?.response?.data?.message
+        ?? 'Failed to activate workflow'
+      alert(`Cannot activate: ${msg}`)
     } finally {
       setActivating(false)
     }
