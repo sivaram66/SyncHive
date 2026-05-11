@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore, useThemeStore } from '@/lib/store'
 import s from './LandingPage.module.css'
@@ -9,17 +8,6 @@ export function LandingPage() {
   const { theme, toggleTheme } = useThemeStore()
   const ctaLabel = token ? 'Open Dashboard' : 'Get started free'
   const ctaRoute = token ? '/workflows' : '/signup'
-
-  // Landing page is always dark — regardless of saved user preference
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', 'dark')
-    document.documentElement.style.colorScheme = 'dark'
-    return () => {
-      // Restore actual user preference when leaving landing page
-      document.documentElement.setAttribute('data-theme', theme)
-      document.documentElement.style.colorScheme = theme
-    }
-  }, [theme])
 
   return (
     <div className={s.page}>
