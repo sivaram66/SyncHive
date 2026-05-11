@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position } from '@xyflow/react'
 import clsx from 'clsx'
 import type { FlowNodeData, NodeType, StepStatus } from '@/types'
 import styles from './WorkflowNode.module.css'
@@ -105,16 +105,16 @@ const STATUS_ICONS: Record<StepStatus, React.ReactNode> = {
   ),
 }
 
-export const WorkflowNode = memo(function WorkflowNode({ data, selected }: NodeProps<FlowNodeData>) {
-  const { workflowNode, executionStatus } = data
+export const WorkflowNode = memo(function WorkflowNode(props: { data: FlowNodeData; selected?: boolean }) {
+  const { workflowNode, executionStatus } = props.data as FlowNodeData
   const { name, type } = workflowNode
-  const meta = NODE_META[type]
+  const meta = NODE_META[type as NodeType]
 
   return (
     <div className={clsx(
       styles.node,
       styles[`type_${type}`],
-      selected && styles.selected,
+      props.selected && styles.selected,
       executionStatus && styles[`status_${executionStatus}`],
     )}>
       <Handle type="target" position={Position.Left} className={styles.handle} />

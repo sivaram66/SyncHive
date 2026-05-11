@@ -1,12 +1,13 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useWorkflow, useExecutions, useSSE } from '@/hooks'
 import { workflowsApi, nodesApi } from '@/lib/api'
 import { useWorkflowStore, useExecutionLiveStore } from '@/lib/store'
 import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas'
+import { NodeConfigPanel } from '@/components/workflow/NodeConfigPanel'
 import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
-import type { NodeType, WorkflowExecution, ExecutionStatus } from '@/types'
+import type { NodeType, WorkflowNode, WorkflowExecution, ExecutionStatus } from '@/types'
 import styles from './EditorPage.module.css'
 
 const STATUS_COLOR: Record<ExecutionStatus, string> = {
@@ -27,10 +28,16 @@ export function EditorPage() {
   const { updateWorkflow }                    = useWorkflowStore()
   const { activeExecutionId, nodeStatuses, setActiveExecution, reset } = useExecutionLiveStore()
 
-  const [activating,  setActivating]  = useState(false)
-  const [executing,   setExecuting]   = useState(false)
-  const [showAddNode, setShowAddNode] = useState(false)
-  const [panelOpen,   setPanelOpen]   = useState(true)
+  const [activating,    setActivating]    = useState(false)
+  const [executing,     setExecuting]     = useState(false)
+  const [showAddNode,   setShowAddNode]   = useState(false)
+  const [panelOpen,     setPanelOpen]     = useState(true)
+  const [selectedNode,  setSelectedNode]  = useState<WorkflowNode | null>(null)
+
+  const handleNodeSelect = useCallback((node: WorkflowNode | null) => {
+    setSelectedNode(node)
+    if (node) setPanelOpen(true)
+  }, [])
 
   // Wire SSE — subscribes to the active execution's stream
   useSSE(activeExecutionId)
@@ -149,53 +156,76 @@ export function EditorPage() {
 
       {/* ── Main: Canvas + Panel ── */}
       <div className={styles.body}>
-        <WorkflowCanvas workflow={workflow} onRefetch={refetch} />
+        <WorkflowCanvas workflow={workflow} onRefetch={refetch} onNodeSelect={handleNodeSelect} />
 
         {panelOpen && (
           <div className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <span className={styles.panelTitle}>Recent executions</span>
-              <button className={styles.panelRefresh} onClick={refetchExec} title="Refresh">
-                <RefreshIcon />
-              </button>
-            </div>
-
-            {/* Live node status summary */}
-            {activeExecutionId && Object.keys(nodeStatuses).length > 0 && (
-              <div className={styles.liveStatus}>
-                <div className={styles.liveStatusTitle}>Live node statuses</div>
-                {Object.entries(nodeStatuses).map(([nodeId, status]) => (
-                  <div key={nodeId} className={styles.liveStatusRow}>
-                    <div className={styles.liveStatusDot} style={{
-                      background: status === 'completed' ? 'rgba(80,200,140,0.9)'
-                        : status === 'failed' ? 'rgba(232,57,42,0.85)'
-                        : status === 'running' ? 'rgba(255,255,255,0.9)'
-                        : 'rgba(255,255,255,0.3)',
-                      boxShadow: status === 'running' ? '0 0 8px rgba(255,255,255,0.5)' : 'none',
-                    }} />
-                    <span className={styles.liveStatusNode}>{nodeId.slice(0, 8)}…</span>
-                    <span className={styles.liveStatusVal}>{status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {executions.length === 0 ? (
-              <div className={styles.panelEmpty}>
-                <p className={styles.panelEmptyText}>No executions yet</p>
-                <p className={styles.panelEmptySub}>Run the workflow to see results here</p>
-              </div>
+            {selectedNode ? (
+              /* ── Node Config Panel ── */
+              <NodeConfigPanel
+                key={selectedNode.id}
+                node={selectedNode}
+                workflowId={workflow.id}
+                onClose={() => setSelectedNode(null)}
+                onSaved={refetch}
+              />
             ) : (
-              <div className={styles.executionList}>
-                {executions.map((ex) => (
-                  <ExecutionRow
-                    key={ex.id}
-                    execution={ex}
-                    isActive={ex.id === activeExecutionId}
-                    onSelect={() => setActiveExecution(ex.id)}
-                  />
-                ))}
-              </div>
+              /* ── Executions Panel ── */
+              <>
+                <div className={styles.panelHeader}>
+                  <span className={styles.panelTitle}>Recent executions</span>
+                  <button className={styles.panelRefresh} onClick={refetchExec} title="Refresh">
+                    <RefreshIcon />
+                  </button>
+                </div>
+
+                {/* Hint to click nodes */}
+                <div className={styles.panelHint}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                    <circle cx="6" cy="6" r="5"/>
+                    <path d="M6 4v4M6 3v.1"/>
+                  </svg>
+                  Click any node to configure it
+                </div>
+
+                {/* Live node status summary */}
+                {activeExecutionId && Object.keys(nodeStatuses).length > 0 && (
+                  <div className={styles.liveStatus}>
+                    <div className={styles.liveStatusTitle}>Live node statuses</div>
+                    {Object.entries(nodeStatuses).map(([nodeId, status]) => (
+                      <div key={nodeId} className={styles.liveStatusRow}>
+                        <div className={styles.liveStatusDot} style={{
+                          background: status === 'completed' ? 'var(--green)'
+                            : status === 'failed' ? 'var(--red)'
+                            : status === 'running' ? 'var(--blue)'
+                            : 'var(--muted)',
+                          boxShadow: status === 'running' ? '0 0 8px var(--blue-glow)' : 'none',
+                        }} />
+                        <span className={styles.liveStatusNode}>{nodeId.slice(0, 8)}…</span>
+                        <span className={styles.liveStatusVal}>{status}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {executions.length === 0 ? (
+                  <div className={styles.panelEmpty}>
+                    <p className={styles.panelEmptyText}>No executions yet</p>
+                    <p className={styles.panelEmptySub}>Run the workflow to see results here</p>
+                  </div>
+                ) : (
+                  <div className={styles.executionList}>
+                    {executions.map((ex) => (
+                      <ExecutionRow
+                        key={ex.id}
+                        execution={ex}
+                        isActive={ex.id === activeExecutionId}
+                        onSelect={() => setActiveExecution(ex.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

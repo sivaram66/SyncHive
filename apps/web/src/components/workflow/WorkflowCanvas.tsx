@@ -7,22 +7,23 @@ import {
   BackgroundVariant,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import type { Workflow, FlowNodeData, StepStatus } from '@/types'
+import type { Workflow, FlowNodeData, WorkflowNode, StepStatus } from '@/types'
 import { nodesApi, edgesApi } from '@/lib/api'
 import { useExecutionLiveStore } from '@/lib/store'
-import { WorkflowNode } from './WorkflowNode'
+import { WorkflowNode as WorkflowNodeComponent } from './WorkflowNode'
 import styles from './WorkflowCanvas.module.css'
 
 const nodeTypes: NodeTypes = {
-  workflowNode: WorkflowNode,
+  workflowNode: WorkflowNodeComponent,
 }
 
 interface Props {
   workflow: Workflow
-  onRefetch: () => void
+  onRefetch?: () => void
+  onNodeSelect?: (node: WorkflowNode | null) => void
 }
 
-export function WorkflowCanvas({ workflow, onRefetch }: Props) {
+export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
   const { nodeStatuses } = useExecutionLiveStore()
 
   /* ── Convert backend nodes → React Flow nodes ── */
@@ -46,7 +47,7 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
       target: e.targetNodeId,
       label: e.label ?? undefined,
       animated: true,
-      style: { stroke: 'var(--gb2)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+      style: { stroke: 'rgba(124,58,237,0.45)', strokeWidth: 1.5, strokeDasharray: '5 4' },
     }))
   }, [workflow.edges])
 
@@ -69,9 +70,7 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
   /* ── Persist node position after drag ── */
   const onNodeDragStop = useCallback(
     async (_: React.MouseEvent, node: Node) => {
-      await nodesApi.update(workflow.id, node.id, {
-        position: node.position,
-      })
+      await nodesApi.update(workflow.id, node.id, { position: node.position })
     },
     [workflow.id]
   )
@@ -92,7 +91,7 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
                 ...connection,
                 id: res.data!.id,
                 animated: true,
-                style: { stroke: 'var(--gb2)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+                style: { stroke: 'rgba(124,58,237,0.45)', strokeWidth: 1.5, strokeDasharray: '5 4' },
               },
               eds
             )
@@ -108,12 +107,23 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
   /* ── Delete edge on selection + backspace ── */
   const onEdgesDelete = useCallback(
     async (deleted: Edge[]) => {
-      await Promise.all(
-        deleted.map((e) => edgesApi.delete(workflow.id, e.id))
-      )
+      await Promise.all(deleted.map((e) => edgesApi.delete(workflow.id, e.id)))
     },
     [workflow.id]
   )
+
+  /* ── Node click → open config panel ── */
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node<FlowNodeData>) => {
+      onNodeSelect?.(node.data.workflowNode)
+    },
+    [onNodeSelect]
+  )
+
+  /* ── Click canvas blank area → deselect ── */
+  const onPaneClick = useCallback(() => {
+    onNodeSelect?.(null)
+  }, [onNodeSelect])
 
   return (
     <div className={styles.canvas}>
@@ -125,6 +135,8 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
         onConnect={onConnect}
         onNodeDragStop={onNodeDragStop}
         onEdgesDelete={onEdgesDelete}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -137,13 +149,13 @@ export function WorkflowCanvas({ workflow, onRefetch }: Props) {
           variant={BackgroundVariant.Dots}
           gap={28}
           size={1}
-          color="var(--gb1)"
+          color="rgba(255,255,255,0.04)"
         />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor="var(--t4)"
           maskColor="var(--glass)"
-          style={{ background: 'var(--s1)', border: '0.5px solid var(--gb2)' }}
+          style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border-2)' }}
         />
       </ReactFlow>
     </div>

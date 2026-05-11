@@ -114,7 +114,7 @@ export interface StepExecution {
 }
 
 /* ─── REACT FLOW NODE DATA ────────────────────────────────── */
-export interface FlowNodeData {
+export interface FlowNodeData extends Record<string, unknown> {
   workflowNode: WorkflowNode
   executionStatus?: StepStatus
   isSelected?: boolean

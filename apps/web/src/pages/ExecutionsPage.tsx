@@ -66,7 +66,7 @@ export function ExecutionsPage() {
             {f !== 'All' && (
               <span className={styles.filterCount}>
                 {executions.filter(e =>
-                  f === 'All' || e.status.toLowerCase() === f.toLowerCase()
+                  e.status.toLowerCase() === (f as string).toLowerCase()
                 ).length}
               </span>
             )}

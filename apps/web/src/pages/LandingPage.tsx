@@ -177,9 +177,6 @@ export function LandingPage() {
   )
 }
 
-function cx(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ')
-}
 
 const FEATURES = [
   {

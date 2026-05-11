@@ -203,6 +203,17 @@
 }
 .panelRefresh:hover { color: var(--t2); background: var(--glass2); }
 
+.panelHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--t4);
+  border-bottom: 1px solid var(--border-1);
+  background: var(--glass);
+}
+
 /* Live node status area */
 .liveStatus {
   padding: 12px 16px;
