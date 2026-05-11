@@ -142,12 +142,13 @@
 .signIn:hover { color: var(--t2); background: var(--glass2); }
 .cta {
   font-size: 13px; font-weight: 600; color: #fff;
-  background: linear-gradient(135deg, var(--accent), #5B21B6);
+  background: linear-gradient(135deg, #2563EB, #0EA5E9);
   border: none; cursor: pointer;
   padding: 7px 18px; border-radius: 9px;
-  transition: all 0.2s; box-shadow: var(--shadow-btn);
+  transition: all 0.2s;
+  box-shadow: 0 0 24px rgba(37,99,235,0.35), 0 2px 8px rgba(0,0,0,0.4);
 }
-.cta:hover { transform: translateY(-1px); box-shadow: 0 0 28px var(--accent-glow); }
+.cta:hover { transform: translateY(-1px); box-shadow: 0 0 36px rgba(37,99,235,0.5), 0 4px 12px rgba(0,0,0,0.4); }
 
 /* ─── Hero ────────────────────────────────────── */
 .hero {
