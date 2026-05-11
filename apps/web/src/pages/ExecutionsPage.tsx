@@ -1,21 +1,34 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useWorkflowStore } from '@/lib/store'
 import { executionsApi } from '@/lib/api'
-import { formatDistanceToNow, format } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import clsx from 'clsx'
-import type { ExecutionStatus, StepExecution, StepStatus } from '@/types'
+import type { ExecutionStatus, StepExecution, StepStatus, WorkflowExecution } from '@/types'
 import styles from './ExecutionsPage.module.css'
 
 const STATUS_FILTERS = ['All', 'Running', 'Completed', 'Failed'] as const
 type Filter = typeof STATUS_FILTERS[number]
 
 export function ExecutionsPage() {
-  const { executions } = useWorkflowStore()
-  const [activeFilter,   setActiveFilter]   = useState<Filter>('All')
-  const [expandedId,     setExpandedId]     = useState<string | null>(null)
-  const [steps,          setSteps]          = useState<StepExecution[]>([])
-  const [stepsLoading,   setStepsLoading]   = useState(false)
-  const [stepsError,     setStepsError]     = useState<string | null>(null)
+  const { executions: storeExecutions, setExecutions } = useWorkflowStore()
+  const [allExecutions, setAllExecutions]   = useState<WorkflowExecution[]>(storeExecutions)
+  const [loadingAll,    setLoadingAll]      = useState(true)
+  const [activeFilter,  setActiveFilter]    = useState<Filter>('All')
+  const [expandedId,    setExpandedId]      = useState<string | null>(null)
+  const [steps,         setSteps]           = useState<StepExecution[]>([])
+  const [stepsLoading,  setStepsLoading]    = useState(false)
+  const [stepsError,    setStepsError]      = useState<string | null>(null)
+
+  // Load all executions from API on mount
+  useEffect(() => {
+    setLoadingAll(true)
+    executionsApi.list()
+      .then(res => { if (res.success && res.data) { setAllExecutions(res.data); setExecutions(res.data) } })
+      .catch(() => {}) // fallback to store data already set above
+      .finally(() => setLoadingAll(false))
+  }, [])
+
+  const executions = allExecutions
 
   const filtered = executions.filter((ex) => {
     if (activeFilter === 'All') return true
@@ -208,8 +221,8 @@ function StepRow({ step, dur }: { step: StepExecution; dur: number | null }) {
         <span className={styles.stepAttempt}>#{step.attempt}</span>
         <span className={styles.stepDur}>{dur !== null ? `${dur}ms` : '—'}</span>
         <div className={styles.stepOutputCell}>
-          {step.errorMessage ? (
-            <span className={styles.stepError}>{step.errorMessage}</span>
+          {(step.errorMessage ?? (step as any).error) ? (
+            <span className={styles.stepError}>{step.errorMessage ?? (step as any).error}</span>
           ) : hasOutput ? (
             <button className={styles.jsonToggle} onClick={() => setJsonOpen(v => !v)}>
               {jsonOpen ? 'Hide output' : 'View output'}

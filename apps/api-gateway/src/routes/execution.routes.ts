@@ -18,6 +18,41 @@ export const executionRouter = Router();
 
 executionRouter.use(authenticate);
 
+// GET /api/executions — all executions for the authenticated user
+executionRouter.get(
+  "/",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get all workflow IDs owned by this user
+      const userWorkflows = await db
+        .select({ id: workflows.id })
+        .from(workflows)
+        .where(eq(workflows.createdBy, req.user!.userId));
+
+      const workflowIds = userWorkflows.map((w) => w.id);
+
+      if (workflowIds.length === 0) {
+        const response: ApiResponse = { success: true, data: [] };
+        return res.json(response);
+      }
+
+      // Fetch all executions for those workflows
+      const { inArray } = await import("drizzle-orm");
+      const allExecutions = await db
+        .select()
+        .from(workflowExecutions)
+        .where(inArray(workflowExecutions.workflowId, workflowIds))
+        .orderBy(desc(workflowExecutions.createdAt))
+        .limit(200);
+
+      const response: ApiResponse = { success: true, data: allExecutions };
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // SSE stream for real-time execution updates
 executionRouter.get(
   "/:executionId/stream",
