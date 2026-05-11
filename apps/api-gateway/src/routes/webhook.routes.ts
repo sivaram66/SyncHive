@@ -27,20 +27,23 @@ webhookRouter.post(
 
       logger.info({ path: fullPath }, "Webhook received");
 
-      // Find the webhook node that matches this path
-      const allWebhookNodes = await db
+      // Find active trigger nodes of type webhook that match this path
+      // Nodes are stored as type="trigger" with config.triggerType="webhook"
+      const allTriggerNodes = await db
         .select({
           nodeId: workflowNodes.id,
           workflowId: workflowNodes.workflowId,
           config: workflowNodes.config,
         })
         .from(workflowNodes)
-        .where(eq(workflowNodes.type, "webhook"));
+        .where(eq(workflowNodes.type, "trigger"));
 
-      // Match by path in config
-      const matchedNode = allWebhookNodes.find((node) => {
-        const config = node.config as { path?: string };
-        return config.path === fullPath;
+      // Match by path — stored in config.path, support both with and without /hooks/ prefix
+      const matchedNode = allTriggerNodes.find((node) => {
+        const config = node.config as { triggerType?: string; path?: string };
+        if (config.triggerType !== "webhook") return false;
+        const storedPath = config.path ?? "";
+        return storedPath === fullPath || storedPath === `/${webhookPath}` || storedPath === webhookPath;
       });
 
       if (!matchedNode) {

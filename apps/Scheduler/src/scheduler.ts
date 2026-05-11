@@ -49,7 +49,8 @@ async function loadScheduledWorkflows(): Promise<ScheduledWorkflow[]> {
       const nodeConfig = node.config as Record<string, unknown>;
       if (nodeConfig.triggerType !== 'schedule') continue;
 
-      const cronExpression = nodeConfig.cronExpression as string;
+      // NodeConfigPanel saves as `cron`, legacy may use `cronExpression`
+      const cronExpression = (nodeConfig.cron ?? nodeConfig.cronExpression) as string | undefined;
       if (!cronExpression) continue;
       if (!cron.validate(cronExpression)) {
         logger.warn({ workflowId: workflow.id, cronExpression }, 'Invalid cron expression, skipping');

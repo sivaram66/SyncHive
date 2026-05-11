@@ -105,4 +105,15 @@ export const edgesApi = {
     api.delete<ApiResponse<null>>(`/workflows/${workflowId}/edges/${edgeId}`).then(r => r.data),
 }
 
+/* ─── EXECUTIONS ──────────────────────────────────────────── */
+export const executionsApi = {
+  /** Fetch all step executions for a given execution ID */
+  steps: (executionId: string) =>
+    api.get<ApiResponse<import('@/types').StepExecution[]>>(`/executions/${executionId}/steps`).then(r => r.data),
+
+  /** All executions across all workflows (global view) */
+  list: () =>
+    api.get<ApiResponse<WorkflowExecution[]>>('/executions').then(r => r.data),
+}
+
 export default api
