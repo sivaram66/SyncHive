@@ -53,11 +53,13 @@ export function EditorPage() {
         alert(`Cannot activate: ${res.error ?? 'Unknown error'}`)
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string; message?: string } } })
-        ?.response?.data?.error
-        ?? (err as { response?: { data?: { error?: string; message?: string } } })
-          ?.response?.data?.message
-        ?? 'Failed to activate workflow'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d = (err as any)?.response?.data
+      const msg =
+        typeof d?.error   === 'string' ? d.error :
+        typeof d?.message === 'string' ? d.message :
+        typeof (err as any)?.message === 'string' ? (err as any).message :
+        'Failed to activate workflow'
       alert(`Cannot activate: ${msg}`)
     } finally {
       setActivating(false)
