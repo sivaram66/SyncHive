@@ -6,7 +6,7 @@ import s from './LandingPage.module.css'
 export function LandingPage() {
   const navigate = useNavigate()
   const { token } = useAuthStore()
-  const { theme } = useThemeStore()
+  const { theme, toggleTheme } = useThemeStore()
   const ctaLabel = token ? 'Open Dashboard' : 'Get started free'
   const ctaRoute = token ? '/workflows' : '/signup'
 
@@ -41,6 +41,9 @@ export function LandingPage() {
           <a className={s.navLink} href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
         </div>
         <div className={s.navRight}>
+          <button className={s.themeBtn} onClick={toggleTheme} title="Toggle theme">
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+          </button>
           <button className={s.signIn} onClick={() => navigate('/login')}>Sign in</button>
           <button className={s.cta} onClick={() => navigate(ctaRoute)}>{ctaLabel}</button>
         </div>
