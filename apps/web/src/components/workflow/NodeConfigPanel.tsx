@@ -430,14 +430,14 @@ function AiConfig({ config, set }: ConfigProps) {
     <>
       <Field label="Model">
         <Select
-          value={String(config.model ?? 'gpt-4o-mini')}
+          value={String(config.model ?? 'llama-3.3-70b-versatile')}
           onChange={(v) => set('model', v)}
           options={[
-            { value: 'gpt-4o',      label: 'GPT-4o' },
-            { value: 'gpt-4o-mini', label: 'GPT-4o mini' },
-            { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-            { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-            { value: 'claude-3-haiku-20240307',    label: 'Claude 3 Haiku' },
+            { value: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile (best)' },
+            { value: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B Instant (fastest)' },
+            { value: 'gemma2-9b-it',             label: 'Gemma 2 9B (Google)' },
+            { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B (long context)' },
+            { value: 'llama-guard-3-8b',         label: 'Llama Guard 3 8B (moderation)' },
           ]}
         />
       </Field>
