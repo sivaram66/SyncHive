@@ -11,9 +11,9 @@ export function TopNav() {
         <div className={styles.gem}>
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
             <path d="M13 2L22 7v12L13 24 4 19V7L13 2z"
-              fill="rgba(124,58,237,0.15)" stroke="#7C3AED" strokeWidth="1.2" strokeLinejoin="round"/>
-            <path d="M13 7l5 3v6L13 19 8 16V10L13 7z" fill="#7C3AED" opacity="0.5"/>
-            <path d="M13 11v3M11.5 12.5h3" stroke="#A78BFA" strokeWidth="1.2" strokeLinecap="round"/>
+              fill="rgba(37,99,235,0.15)" stroke="#2563EB" strokeWidth="1.2" strokeLinejoin="round"/>
+            <path d="M13 7l5 3v6L13 19 8 16V10L13 7z" fill="#2563EB" opacity="0.5"/>
+            <path d="M13 11v3M11.5 12.5h3" stroke="#60A5FA" strokeWidth="1.2" strokeLinecap="round"/>
           </svg>
         </div>
         <span className={styles.brand}>SyncHive</span>

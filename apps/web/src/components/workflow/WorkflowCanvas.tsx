@@ -47,7 +47,7 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
       target: e.targetNodeId,
       label: e.label ?? undefined,
       animated: true,
-      style: { stroke: 'rgba(124,58,237,0.45)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+      style: { stroke: 'rgba(59,130,246,0.55)', strokeWidth: 1.5, strokeDasharray: '5 4' },
     }))
   }, [workflow.edges])
 
@@ -91,7 +91,7 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
                 ...connection,
                 id: res.data!.id,
                 animated: true,
-                style: { stroke: 'rgba(124,58,237,0.45)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+                style: { stroke: 'rgba(59,130,246,0.55)', strokeWidth: 1.5, strokeDasharray: '5 4' },
               },
               eds
             )

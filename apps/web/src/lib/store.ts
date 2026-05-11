@@ -15,6 +15,7 @@ export const useThemeStore = create<ThemeStore>()(
       toggleTheme: () => {
         const next = get().theme === 'dark' ? 'light' : 'dark'
         document.documentElement.setAttribute('data-theme', next)
+        document.documentElement.style.colorScheme = next
         set({ theme: next })
       },
     }),

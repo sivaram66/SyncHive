@@ -13,7 +13,9 @@ import styles from './App.module.css'
 
 function ThemeSync() {
   const { theme } = useThemeStore()
+  // Apply on every render — covers hydration from persisted store
   document.documentElement.setAttribute('data-theme', theme)
+  document.documentElement.style.colorScheme = theme
   return null
 }
 
