@@ -41,9 +41,6 @@ export function LandingPage() {
           <a className={s.navLink} href="https://github.com" target="_blank" rel="noreferrer">GitHub</a>
         </div>
         <div className={s.navRight}>
-          <button className={s.themeBtn} onClick={toggleTheme}>
-            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-          </button>
           <button className={s.signIn} onClick={() => navigate('/login')}>Sign in</button>
           <button className={s.cta} onClick={() => navigate(ctaRoute)}>{ctaLabel}</button>
         </div>
