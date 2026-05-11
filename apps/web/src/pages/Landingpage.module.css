@@ -1,10 +1,44 @@
 /* ─── Page ────────────────────────────────────── */
+/* Landing page always renders in dark mode — override ALL tokens locally */
 .page {
   min-height: 100vh;
-  background: #000000;   /* always dark — marketing page */
-  color: #FFFFFF;
+  background: #000000;
   overflow-x: hidden;
   position: relative;
+
+  /* Force dark text tokens regardless of data-theme */
+  --t1: #FFFFFF;
+  --t2: rgba(255,255,255,0.75);
+  --t3: rgba(255,255,255,0.45);
+  --t4: rgba(255,255,255,0.25);
+
+  /* Force dark surface tokens */
+  --bg-surface: #0A0A0A;
+  --bg-raised:  #111111;
+  --bg-overlay: #181818;
+  --bg-input:   #0D0D0D;
+
+  /* Force dark glass tokens */
+  --glass:  rgba(255,255,255,0.02);
+  --glass2: rgba(255,255,255,0.05);
+  --glass3: rgba(255,255,255,0.09);
+
+  /* Force dark border tokens */
+  --border-1: rgba(255,255,255,0.06);
+  --border-2: rgba(255,255,255,0.10);
+  --border-3: rgba(255,255,255,0.16);
+
+  /* Keep blue accent */
+  --accent:        #2563EB;
+  --accent-light:  #60A5FA;
+  --accent-dim:    #1E3A8A;
+  --accent-glow:   rgba(37,99,235,0.35);
+  --accent-subtle: rgba(37,99,235,0.10);
+  --accent-border: rgba(59,130,246,0.30);
+
+  /* Dark shadows */
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.8);
+  --shadow-md:   0 4px 20px rgba(0,0,0,0.8);
 }
 
 /* Decorative orbs */
