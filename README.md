@@ -178,4 +178,3 @@ This starts all 4 apps simultaneously via Turborepo:
 - **JWT in query param for SSE** — `EventSource` API can't set custom headers; token goes in `?token=`.
 
 ---
-
