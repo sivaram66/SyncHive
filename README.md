@@ -179,6 +179,3 @@ This starts all 4 apps simultaneously via Turborepo:
 
 ---
 
-## License
-
-MIT
