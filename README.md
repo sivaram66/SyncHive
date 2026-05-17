@@ -125,6 +125,8 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/...  # optional
 npx drizzle-kit push
 ```
 
+This creates all the tables in your Neon PostgreSQL database. Only needed once on first setup.
+
 ### 4. Run all services
 
 ```bash
