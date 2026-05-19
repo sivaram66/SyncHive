@@ -157,6 +157,11 @@ export function EditorPage() {
             </button>
           )}
           {workflow.status === 'active' && (
+            <button className={clsx(styles.btn, styles.activateBtn)} onClick={handleActivate} disabled={activating} title="Re-freeze snapshot with latest node configs">
+              {activating ? <MiniSpinner /> : '↻ Re-activate'}
+            </button>
+          )}
+          {workflow.status === 'active' && (
             <button className={clsx(styles.btn, styles.runBtn)} onClick={handleExecute} disabled={executing}>
               {executing ? <MiniSpinner /> : '▶ Run now'}
             </button>
