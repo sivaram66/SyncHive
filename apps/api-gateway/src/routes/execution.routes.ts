@@ -139,6 +139,8 @@ executionRouter.get(
       }
 
       // Set SSE headers
+      // Bump listener limit — SSE + Express middleware add several listeners per connection
+      res.setMaxListeners(20);
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
