@@ -238,6 +238,12 @@ async function executeNodeWithSpan(input: ExecuteNodeWithSpanInput): Promise<voi
         try {
           const result = await executeNode(node, nodeOutputs);
 
+          // If the integration returns success:false, treat it as a thrown error
+          // so retry logic and failure tracking work correctly
+          if (!result.success) {
+            throw new Error(result.error ?? `Node ${node.name} returned success: false`);
+          }
+
           // Store output so downstream nodes can reference it
           nodeOutputs[node.id] = result.output;
 
