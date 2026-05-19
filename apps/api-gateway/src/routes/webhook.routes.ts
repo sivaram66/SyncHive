@@ -39,9 +39,11 @@ webhookRouter.post(
         .where(eq(workflowNodes.type, "trigger"));
 
       // Match by path — stored in config.path, support both with and without /hooks/ prefix
+      // triggerType defaults to 'webhook' if not explicitly set (matches UI default)
       const matchedNode = allTriggerNodes.find((node) => {
         const config = node.config as { triggerType?: string; path?: string };
-        if (config.triggerType !== "webhook") return false;
+        const triggerType = config.triggerType ?? 'webhook';
+        if (triggerType !== "webhook") return false;
         const storedPath = config.path ?? "";
         return storedPath === fullPath || storedPath === `/${webhookPath}` || storedPath === webhookPath;
       });

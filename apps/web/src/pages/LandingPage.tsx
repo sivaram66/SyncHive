@@ -55,14 +55,14 @@ export function LandingPage() {
           <button className={s.heroPrimary} onClick={() => navigate(ctaRoute)}>
             {ctaLabel} <ArrowIcon />
           </button>
-          <a className={s.heroSecondary} href="https://github.com" target="_blank" rel="noreferrer">
+          <a className={s.heroSecondary} href="https://github.com/sivaram66/SyncHive" target="_blank" rel="noreferrer">
             <GithubIcon /> View on GitHub
           </a>
         </div>
         <div className={s.heroStats}>
           {[
-            { num: '∞',    label: 'Workflows' },
-            { num: '6',    label: 'Node types' },
+            { num: '∞', label: 'Workflows' },
+            { num: '6', label: 'Node types' },
             { num: '<200ms', label: 'Queue latency' },
             { num: '99.9%', label: 'Reliability' },
           ].map((item, i) => (
@@ -77,7 +77,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      
+
 
       {/* ── FEATURES ── */}
       <section className={s.section} id="features">
@@ -182,47 +182,47 @@ const FEATURES = [
   {
     title: 'Visual DAG Editor',
     desc: 'Drag, drop, and connect nodes on a canvas powered by React Flow. Your workflow topology is always visible.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="13" y="1" width="6" height="6" rx="1.5"/><rect x="7" y="13" width="6" height="6" rx="1.5"/><path d="M4 7v2.5a2.5 2.5 0 002.5 2.5H8.5M16 7v2.5a2.5 2.5 0 01-2.5 2.5H11.5"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="6" height="6" rx="1.5" /><rect x="13" y="1" width="6" height="6" rx="1.5" /><rect x="7" y="13" width="6" height="6" rx="1.5" /><path d="M4 7v2.5a2.5 2.5 0 002.5 2.5H8.5M16 7v2.5a2.5 2.5 0 01-2.5 2.5H11.5" /></svg>,
   },
   {
     title: 'BullMQ Powered Queue',
     desc: 'Every execution is a reliable BullMQ job — dead-letter queues, deterministic job IDs, and automatic deduplication.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2L3 6v8l7 4 7-4V6L10 2z"/><path d="M10 2v14M3 6l7 4 7-4"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2L3 6v8l7 4 7-4V6L10 2z" /><path d="M10 2v14M3 6l7 4 7-4" /></svg>,
   },
   {
     title: 'Per-node Retry Policies',
     desc: 'Each node has its own maxRetries, backoffMs, and multiplier. AI calls retry 3x. Webhooks never retry.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5A7 7 0 104 16M15 5v4h-4"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5A7 7 0 104 16M15 5v4h-4" /></svg>,
   },
   {
     title: 'Parallel Execution',
     desc: 'DAG levels run in parallel using Promise.allSettled. Independent branches never block each other.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v14M4 8l6-5 6 5M4 12l6 5 6-5"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3v14M4 8l6-5 6 5M4 12l6 5 6-5" /></svg>,
   },
   {
     title: 'Version Snapshots',
     desc: 'Activating freezes the graph. Edit a live workflow without breaking running executions — ever.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 3"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><path d="M10 6v4l3 3" /></svg>,
   },
   {
     title: 'Webhook Triggers',
     desc: 'Expose endpoints instantly. API returns 202 immediately, executes async. GitHub, Stripe, Slack — anything.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2C6 2 3 5 3 9s3 7 7 7 7-3 7-7M14 2l3 2-2 3"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2C6 2 3 5 3 9s3 7 7 7 7-3 7-7M14 2l3 2-2 3" /></svg>,
   },
   {
     title: 'Mustache Templates',
     desc: 'Reference upstream node outputs with {{sender.login}} syntax — dot notation, recursive config resolution.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7l-2 3 2 3M16 7l2 3-2 3M8 4l-2 12M14 4l-2 12"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7l-2 3 2 3M16 7l2 3-2 3M8 4l-2 12M14 4l-2 12" /></svg>,
   },
   {
     title: 'Condition Evaluator',
     desc: 'Branch your DAG based on runtime expressions. Evaluate node output, skip paths, handle errors gracefully.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h12M10 4l4 6-4 6M6 4L2 10l4 6"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h12M10 4l4 6-4 6M6 4L2 10l4 6" /></svg>,
   },
   {
     title: 'Audit Trail',
     desc: 'Every retry is a new row. Failed rows are never mutated. Full execution history always preserved.',
-    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h14M3 9h10M3 13h7M3 17h5"/></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h14M3 9h10M3 13h7M3 17h5" /></svg>,
   },
 ]
 
@@ -237,44 +237,44 @@ const FLOW = [
   {
     title: 'Webhook fires',
     desc: 'External service hits /hooks/:path',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2C5.7 2 3 4.7 3 8s2.7 6 6 6 6-2.7 6-6M12 2l3 1.5-1.5 2.5"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2C5.7 2 3 4.7 3 8s2.7 6 6 6 6-2.7 6-6M12 2l3 1.5-1.5 2.5" /></svg>,
   },
   {
     title: 'API returns 202',
     desc: 'Immediate response, async execution',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l4 4 8-8"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l4 4 8-8" /></svg>,
   },
   {
     title: 'BullMQ job queued',
     desc: 'Deterministic ID prevents duplicates',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2L2 6v6l7 4 7-4V6L9 2z"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2L2 6v6l7 4 7-4V6L9 2z" /></svg>,
   },
   {
     title: 'Engine picks up',
     desc: 'Loads snapshot, builds DAG',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="3"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="3" /><path d="M9 2v2M9 14v2M2 9h2M14 9h2" /></svg>,
   },
   {
     title: 'Nodes execute',
     desc: 'Parallel branches, retries, timeouts',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l3 3 5-5"/><circle cx="9" cy="9" r="7"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 9l3 3 5-5" /><circle cx="9" cy="9" r="7" /></svg>,
   },
   {
     title: 'Logged & done',
     desc: 'Every step recorded, audit trail kept',
-    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h12M3 9h8M3 13h5"/></svg>,
+    icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h12M3 9h8M3 13h5" /></svg>,
   },
 ]
 
 function ArrowIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7h10M8 3l4 4-4 4"/></svg>
+  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7h10M8 3l4 4-4 4" /></svg>
 }
 function GithubIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" /></svg>
 }
 function SunIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="7" cy="7" r="2.8"/><path d="M7 1v1.2M7 11.8V13M1 7h1.2M11.8 7H13M2.76 2.76l.85.85M10.39 10.39l.85.85M2.76 11.24l.85-.85M10.39 3.61l.85-.85"/></svg>
+  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><circle cx="7" cy="7" r="2.8" /><path d="M7 1v1.2M7 11.8V13M1 7h1.2M11.8 7H13M2.76 2.76l.85.85M10.39 10.39l.85.85M2.76 11.24l.85-.85M10.39 3.61l.85-.85" /></svg>
 }
 function MoonIcon() {
-  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 5.5A5 5 0 114 11a3.8 3.8 0 006.5-5.5z"/></svg>
+  return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"><path d="M10.5 5.5A5 5 0 114 11a3.8 3.8 0 006.5-5.5z" /></svg>
 }
