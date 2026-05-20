@@ -242,7 +242,7 @@ async function executeAI(
   config: Record<string, unknown>,
   input: Record<string, unknown>
 ): Promise<NodeExecutionResult> {
-  const model = (config.model as string) ?? "gpt-4o-mini";
+  const model = (config.model as string) ?? "llama-3.3-70b-versatile";
   const prompt = config.prompt as string;
 
   logger.info({ model, promptLength: prompt?.length }, "Executing AI node");
