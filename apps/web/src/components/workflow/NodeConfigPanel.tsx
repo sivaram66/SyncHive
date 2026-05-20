@@ -262,6 +262,17 @@ function TriggerConfig({ config, set }: ConfigProps) {
         </Field>
       )}
 
+      {trigType === 'webhook' && (
+        <Field label="Action filter" hint="Optional. Only trigger when body.action matches (e.g. 'created'). Leave empty to trigger on all actions.">
+          <input
+            className={styles.input}
+            value={String(config.action ?? '')}
+            onChange={(e) => set('action', e.target.value)}
+            placeholder="created"
+          />
+        </Field>
+      )}
+
       {trigType === 'schedule' && (
         <Field label="Cron expression" hint="e.g. 0 9 * * 1-5 (weekdays at 9am)">
           <input

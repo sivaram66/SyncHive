@@ -40,15 +40,35 @@ webhookRouter.post(
 
       // Match by path — stored in config.path, support both with and without /hooks/ prefix
       // triggerType defaults to 'webhook' if not explicitly set (matches UI default)
+      const requestAction = (req.body as Record<string, unknown>)?.action as string | undefined;
+
       const matchedNode = allTriggerNodes.find((node) => {
-        const config = node.config as { triggerType?: string; path?: string };
+        const config = node.config as { triggerType?: string; path?: string; action?: string };
         const triggerType = config.triggerType ?? 'webhook';
         if (triggerType !== "webhook") return false;
         const storedPath = config.path ?? "";
-        return storedPath === fullPath || storedPath === `/${webhookPath}` || storedPath === webhookPath;
+        const pathMatch = storedPath === fullPath || storedPath === `/${webhookPath}` || storedPath === webhookPath;
+        if (!pathMatch) return false;
+        // If trigger has an action filter, only process matching actions (e.g. "created" not "deleted")
+        if (config.action && requestAction && config.action !== requestAction) return false;
+        return true;
       });
 
       if (!matchedNode) {
+        // If no node matched, check if it's a filtered-out action (e.g. star.deleted)
+        const hasPathMatch = allTriggerNodes.some((node) => {
+          const config = node.config as { triggerType?: string; path?: string };
+          const triggerType = config.triggerType ?? 'webhook';
+          if (triggerType !== "webhook") return false;
+          const storedPath = config.path ?? "";
+          return storedPath === fullPath || storedPath === `/${webhookPath}` || storedPath === webhookPath;
+        });
+        if (hasPathMatch) {
+          // Path matched but action was filtered out — acknowledge silently
+          logger.info({ path: fullPath, action: requestAction }, "Webhook action filtered out, skipping execution");
+          res.status(200).json({ success: true, data: { status: "filtered", reason: `action '${requestAction}' not configured for this trigger` } });
+          return;
+        }
         throw new AppError(404, "WEBHOOK_NOT_FOUND", "No workflow registered for this webhook path");
       }
 
