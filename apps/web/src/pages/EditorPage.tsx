@@ -33,6 +33,7 @@ export function EditorPage() {
   const [showAddNode,   setShowAddNode]   = useState(false)
   const [panelOpen,     setPanelOpen]     = useState(true)
   const [selectedNode,  setSelectedNode]  = useState<WorkflowNode | null>(null)
+  const [toast,         setToast]         = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
 
   const handleNodeSelect = useCallback((node: WorkflowNode | null) => {
     setSelectedNode(node)
@@ -42,6 +43,11 @@ export function EditorPage() {
   // Wire SSE — subscribes to the active execution's stream
   useSSE(activeExecutionId)
 
+  function showToast(msg: string, type: 'success' | 'error' = 'success') {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3500)
+  }
+
   async function handleActivate() {
     if (!workflow) return
     setActivating(true)
@@ -49,8 +55,10 @@ export function EditorPage() {
       const res = await workflowsApi.activate(workflow.id)
       if (res.success && res.data) {
         updateWorkflow(workflow.id, { status: res.data.status })
+        const ver = (res.data as any).currentVersion
+        showToast(`✅ Snapshot updated${ver ? ` — version ${ver}` : ''}. New executions use the latest config.`)
       } else {
-        alert(`Cannot activate: ${res.error ?? 'Unknown error'}`)
+        showToast(`Cannot activate: ${res.error ?? 'Unknown error'}`, 'error')
       }
     } catch (err: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,7 +68,7 @@ export function EditorPage() {
         typeof d?.message === 'string' ? d.message :
         typeof (err as any)?.message === 'string' ? (err as any).message :
         'Failed to activate workflow'
-      alert(`Cannot activate: ${msg}`)
+      showToast(`Cannot activate: ${msg}`, 'error')
     } finally {
       setActivating(false)
     }
@@ -107,6 +115,18 @@ export function EditorPage() {
 
   return (
     <div className={styles.page}>
+      {/* ── Toast notification ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, padding: '10px 20px', borderRadius: 8, maxWidth: 480,
+          background: toast.type === 'success' ? '#16a34a' : '#dc2626',
+          color: '#fff', fontWeight: 600, fontSize: 13, boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          animation: 'none', whiteSpace: 'nowrap'
+        }}>
+          {toast.msg}
+        </div>
+      )}
       {/* ── Editor topbar ── */}
       <div className={styles.topbar}>
         <div className={styles.topLeft}>
