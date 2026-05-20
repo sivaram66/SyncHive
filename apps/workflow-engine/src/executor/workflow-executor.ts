@@ -87,7 +87,14 @@ export async function executeWorkflow(input: ExecuteWorkflowInput): Promise<void
 
         // Node output accumulator — later nodes can reference earlier outputs
         const nodeOutputs: Record<string, unknown> = {};
-        if (triggerData) nodeOutputs['__trigger__'] = triggerData;
+        if (triggerData) {
+          nodeOutputs['__trigger__'] = triggerData;
+          // User-friendly aliases so templates can use:
+          //   {{triggerData.body.sender.login}}
+          //   {{trigger.body.repository.name}}
+          nodeOutputs['triggerData'] = triggerData;
+          nodeOutputs['trigger']     = triggerData;
+        }
 
         let executionFailed = false;
 
