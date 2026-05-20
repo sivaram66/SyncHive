@@ -9,11 +9,14 @@ import {
 import { ApiResponse } from "@synchive/shared-types";
 import { db } from "../services/db.service";
 // import { executionQueue } from "../services/queue.service";
-import { enqueueExecution, ExecutionJobData } from "@synchive/queue";
+import { enqueueExecution, ExecutionJobData, getRedisConnection } from "@synchive/queue";
 import { createLogger } from "@synchive/logger";
 import { AppError } from "../middleware/error-handler";
 
 const logger = createLogger({ service: "api-gateway" });
+// 24-hour TTL for delivery deduplication keys
+const DELIVERY_DEDUP_TTL_SECONDS = 24 * 60 * 60;
+
 
 export const webhookRouter = Router();
 
@@ -26,6 +29,22 @@ webhookRouter.post(
       const fullPath = `/hooks/${webhookPath}`;
 
       logger.info({ path: fullPath }, "Webhook received");
+
+      // ── Idempotency: deduplicate GitHub retries ──────────────────────────────
+      // GitHub sends X-GitHub-Delivery (a UUID) per unique delivery.
+      // If it retries a failed delivery, the UUID is the same — we skip it.
+      const deliveryId = req.headers['x-github-delivery'] as string | undefined;
+      if (deliveryId) {
+        const redis = getRedisConnection();
+        const dedupKey = `webhook:delivery:${deliveryId}`;
+        const alreadyProcessed = await redis.set(dedupKey, '1', 'EX', DELIVERY_DEDUP_TTL_SECONDS, 'NX');
+        if (alreadyProcessed === null) {
+          // NX failed — key already existed — this is a duplicate delivery
+          logger.info({ deliveryId, path: fullPath }, 'Duplicate webhook delivery — skipping');
+          res.status(200).json({ success: true, data: { status: 'deduplicated', deliveryId } });
+          return;
+        }
+      }
 
       // Find active trigger nodes of type webhook that match this path
       // Nodes are stored as type="trigger" with config.triggerType="webhook"
