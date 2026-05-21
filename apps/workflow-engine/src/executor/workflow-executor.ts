@@ -182,6 +182,85 @@ export async function executeWorkflow(input: ExecuteWorkflowInput): Promise<void
               'condition branch evaluated'
             );
           }
+
+          // ── Loop body iteration ──────────────────────────────────────────────
+          // After each level, check for loop nodes that just completed.
+          // Their direct children (loop body) get executed once per array item.
+          for (const nodeId of nodesToRun) {
+            const node = snapshot.nodes.find((n) => n.id === nodeId);
+            if (!node || node.type !== 'loop') continue;
+
+            const loopOut = nodeOutputs[nodeId] as Record<string, unknown> | undefined;
+            if (!loopOut) continue;
+
+            const items      = loopOut.items as unknown[];
+            const itemVar    = (loopOut.iteratedOver as string | undefined) ?? 'item';
+            const dagNode    = dag.nodes.get(nodeId);
+            if (!dagNode || !Array.isArray(items) || items.length === 0) continue;
+
+            // Direct children of this loop node = loop body
+            const loopBodyNodeIds = dagNode.outgoingEdges.map((e) => e.targetNodeId);
+            if (loopBodyNodeIds.length === 0) continue;
+
+            logger.info({ nodeId, itemCount: items.length, loopBodyNodeIds }, 'executing loop body per item');
+
+            const iterationResults: unknown[] = [];
+
+            for (let idx = 0; idx < items.length; idx++) {
+              const item = items[idx];
+
+              // Build per-iteration context: global outputs + this item injected
+              const iterOutputs: Record<string, unknown> = {
+                ...nodeOutputs,
+                loopItem:  item,
+                loopIndex: idx,
+                [itemVar]: item,   // also available as the configured itemVar name
+              };
+
+              const iterItemResults: Record<string, unknown> = {};
+
+              for (const bodyNodeId of loopBodyNodeIds) {
+                if (skippedNodes.has(bodyNodeId)) continue;
+                const bodyNode = snapshot.nodes.find((n) => n.id === bodyNodeId);
+                if (!bodyNode) continue;
+
+                try {
+                  // Run with per-iteration context (don't persist to global nodeOutputs yet)
+                  const { executeNode } = await import('./node-executor');
+                  const result = await executeNode(bodyNode, iterOutputs);
+                  if (result.success) {
+                    iterItemResults[bodyNodeId] = result.output;
+                    iterOutputs[bodyNodeId] = result.output;
+                  } else {
+                    iterItemResults[bodyNodeId] = { error: result.error };
+                  }
+                  logger.debug({ nodeId: bodyNodeId, idx }, 'loop body node executed');
+                } catch (err) {
+                  logger.warn({ nodeId: bodyNodeId, idx, err }, 'loop body node error (non-fatal)');
+                  iterItemResults[bodyNodeId] = { error: String(err) };
+                }
+              }
+
+              iterationResults.push({
+                index: idx,
+                item,
+                results: iterItemResults,
+              });
+            }
+
+            // Store aggregated iteration results back on the loop node output
+            // so downstream nodes after the loop body can access all results.
+            (nodeOutputs[nodeId] as Record<string, unknown>).loopIterations = iterationResults;
+            (nodeOutputs[nodeId] as Record<string, unknown>).loopResults = iterationResults; // alias
+
+            // Skip the loop body nodes in the main DAG level traversal
+            // (they've already been handled per-item above)
+            for (const bodyNodeId of loopBodyNodeIds) {
+              skippedNodes.add(bodyNodeId);
+            }
+
+            logger.info({ nodeId, itemCount: items.length, iterationsCompleted: iterationResults.length }, 'loop body completed');
+          }
         }
 
         if (executionFailed) {

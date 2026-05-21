@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@opentelemetry/auto-instrumentations-node": "^0.72.0",
@@ -29,6 +31,7 @@
     "@types/node": "^22.0.0",
     "nodemon": "^3.1.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.7"
   }
 }

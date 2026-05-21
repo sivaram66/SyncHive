@@ -1,0 +1,205 @@
+.page {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.title { font-size: 22px; font-weight: 700; color: var(--t1); margin: 0 0 4px; }
+.sub   { font-size: 13px; color: var(--t4); margin: 0; }
+
+.newBtn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), #5B21B6);
+  border: none; color: #fff;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.18s;
+  box-shadow: var(--shadow-btn);
+  flex-shrink: 0;
+}
+.newBtn:hover { transform: translateY(-1px); }
+
+/* ─── Stats ─────────────────────────── */
+.statsRow {
+  display: flex;
+  gap: 1px;
+  background: var(--border-1);
+  border: 1px solid var(--border-1);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.statCard {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; padding: 16px 12px;
+  background: var(--bg-surface);
+}
+.statNum   { font-size: 22px; font-weight: 700; color: var(--t1); }
+.statLabel { font-size: 12px; color: var(--t4); }
+.green     { color: var(--green); }
+.amber     { color: #fbbf24; }
+
+/* ─── Table ──────────────────────────── */
+.table {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border-1);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.tableHead {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1.2fr 1.4fr 90px;
+  padding: 10px 18px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-1);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--t4);
+}
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1fr 1.2fr 1.4fr 90px;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-surface);
+  transition: background 0.12s;
+  animation: fadeUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+}
+.row:last-child { border-bottom: none; }
+.row:hover { background: var(--glass); }
+
+.rowName { display: flex; flex-direction: column; gap: 2px; }
+.nameText { font-size: 13.5px; font-weight: 600; color: var(--t1); }
+.nameDesc { font-size: 12px; color: var(--t4); }
+.timezone { font-size: 11px; color: var(--t4); font-family: var(--mono); }
+
+.cron { }
+.cronCode {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--accent-light);
+  background: var(--accent-subtle);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  white-space: nowrap;
+}
+
+/* Status chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600;
+}
+.chipPulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(16,185,129,0.5);
+  animation: pulse 2s infinite;
+}
+.chipActive { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+.chipPaused { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.chipDraft  { background: var(--glass); color: var(--t4); border: 1px solid var(--border-2); }
+
+.time    { font-size: 12.5px; color: var(--t3); }
+.dimText { color: var(--t4); font-size: 12px; }
+
+.nextRun { display: flex; flex-direction: column; gap: 3px; }
+.nextBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 600; color: var(--accent-light);
+  background: var(--accent-subtle); padding: 3px 8px; border-radius: 6px;
+  border: 1px solid var(--accent-border);
+}
+.nextAbsolute { font-size: 11px; color: var(--t4); font-family: var(--mono); }
+
+.editBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 7px;
+  border: 1px solid var(--border-2);
+  background: var(--glass); color: var(--t3);
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.editBtn:hover { background: var(--glass2); color: var(--t2); }
+
+/* ─── Loading / Error ───────────────── */
+.center {
+  display: flex; align-items: center; justify-content: center;
+  padding: 80px;
+}
+.spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--border-2);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+.errorBox {
+  padding: 14px 18px; border-radius: 10px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: var(--red); font-size: 13px;
+}
+
+/* ─── Empty state ───────────────────── */
+.empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 80px 20px; text-align: center;
+  border: 1px solid var(--border-1); border-radius: 14px;
+  background: var(--bg-surface);
+}
+.emptyIcon { color: var(--t4); margin-bottom: 4px; }
+.emptyTitle { font-size: 18px; font-weight: 700; color: var(--t2); margin: 0; }
+.emptySub   { font-size: 13px; color: var(--t4); margin: 0; }
+
+/* ─── Cron cheatsheet ───────────────── */
+.cheatsheet {
+  border: 1px solid var(--border-1);
+  border-radius: 14px;
+  background: var(--bg-surface);
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.cheatTitle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--t2);
+}
+.cheatFormat {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 14px; border-radius: 8px;
+  background: var(--glass); border: 1px solid var(--border-1);
+}
+.cheatFormat code { font-family: var(--mono); font-size: 13px; color: var(--accent-light); letter-spacing: 0.06em; }
+.cheatFormatSub   { font-size: 11px; color: var(--t4); }
+.cheatGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+}
+.cheatRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 7px;
+  background: var(--glass);
+}
+.cheatCode { font-family: var(--mono); font-size: 12px; color: var(--t2); min-width: 120px; }
+.cheatDesc { font-size: 12px; color: var(--t4); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin  { to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+  50%       { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+}

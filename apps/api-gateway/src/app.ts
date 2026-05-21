@@ -11,6 +11,7 @@ import { workflowRouter } from "./routes/workflow.routes";
 import { webhookRouter } from "./routes/webhook.routes";
 import { healthRouter } from "./routes/health.routes";
 import { executionRouter } from "./routes/execution.routes";
+import { schedulerRouter } from "./routes/scheduler.routes";
 
 export const app = express();
 
@@ -72,11 +73,12 @@ app.use(
 );
 
 // --------------- Routes ---------------
-app.use("/health", healthRouter);
-app.use("/api/auth", authLimiter, authRouter);
-app.use("/api/workflows", apiLimiter, workflowRouter);
-app.use("/api/executions", apiLimiter, executionRouter);
-app.use("/hooks", webhookLimiter, webhookRouter);
+app.use("/health",          healthRouter);
+app.use("/api/auth",        authLimiter, authRouter);
+app.use("/api/workflows",   apiLimiter, workflowRouter);
+app.use("/api/executions",  apiLimiter, executionRouter);
+app.use("/api/scheduler",   apiLimiter, schedulerRouter);
+app.use("/hooks",           webhookLimiter, webhookRouter);
 
 // --------------- Error handling ---------------
 app.use(errorHandler);
