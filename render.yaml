@@ -59,3 +59,4 @@ services:
     name: synchive-redis
     plan: free
     maxmemoryPolicy: noeviction
+    ipAllowList: []   # empty = internal Render services only (no public access)
