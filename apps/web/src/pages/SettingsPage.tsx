@@ -4,7 +4,7 @@ import { authApi } from '@/lib/api'
 import styles from './SettingsPage.module.css'
 
 export function SettingsPage() {
-  const { user, setUser } = useAuthStore()
+  const { user, setAuth, token } = useAuthStore()
 
   // Profile form
   const [name,        setName]        = useState(user?.name ?? '')
@@ -27,7 +27,7 @@ export function SettingsPage() {
     try {
       const res = await authApi.updateProfile(name.trim())
       if (res.success && res.data) {
-        setUser({ ...user!, name: res.data.name })
+        setAuth(token!, { ...user!, name: res.data.name })
         setNameMsg({ text: 'Name updated successfully ✓', ok: true })
       } else {
         setNameMsg({ text: res.error ?? 'Failed to update', ok: false })
@@ -173,9 +173,9 @@ export function SettingsPage() {
           </div>
 
           <div className={styles.infoGrid}>
-            <InfoRow label="User ID"    value={user?.id ?? '—'} mono />
+            <InfoRow label="User ID"    value={user?.userId ?? '—'} mono />
             <InfoRow label="Email"      value={user?.email ?? '—'} />
-            <InfoRow label="Member since" value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'} />
+            <InfoRow label="Member since" value="—" />
             <InfoRow label="Plan"       value="Free" />
           </div>
         </section>
