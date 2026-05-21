@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { createDb  } from '@synchive/db';
 import { workflowVersions, workflowExecutions, stepExecutions } from '@synchive/db';
 import { WorkflowSnapshot, SnapshotNode } from '@synchive/shared-types';
-import { buildDAG, topologicalSort } from './dag';
+import { buildDAG, topologicalSort, DAGGraph } from './dag';
 import { executeNode } from './node-executor';
 import { publishExecutionEvent } from '@synchive/queue';
 import { createLogger } from '@synchive/logger';
@@ -98,12 +98,46 @@ export async function executeWorkflow(input: ExecuteWorkflowInput): Promise<void
 
         let executionFailed = false;
 
+        // Tracks which nodes should be skipped due to a condition branch not taken
+        const skippedNodes = new Set<string>();
+
         // Execute level by level. Within each level, nodes run in parallel.
         for (const level of levels) {
           if (executionFailed) break;
 
+          // Separate nodes that should be skipped vs actually run this level
+          const nodesToRun   = level.filter((id) => !skippedNodes.has(id));
+          const nodesToSkip  = level.filter((id) =>  skippedNodes.has(id));
+
+          // Record skipped nodes in DB so the audit trail is complete
+          for (const nodeId of nodesToSkip) {
+            const node = snapshot.nodes.find((n) => n.id === nodeId);
+            if (!node) continue;
+            await db.insert(stepExecutions).values({
+              executionId,
+              nodeId: node.id,
+              attempt: 1,
+              status: 'skipped',
+              startedAt: new Date(),
+              completedAt: new Date(),
+            });
+            await publishExecutionEvent({
+              type: 'step:completed',
+              executionId,
+              workflowId,
+              data: {
+                nodeId: node.id,
+                nodeName: node.name,
+                nodeType: node.type,
+                status: 'skipped',
+              },
+              timestamp: new Date().toISOString(),
+            });
+            logger.info({ nodeId, nodeName: node.name }, 'node skipped (condition branch not taken)');
+          }
+
           const levelResults = await Promise.allSettled(
-            level.map((nodeId) => {
+            nodesToRun.map((nodeId) => {
               const node = snapshot.nodes.find((n) => n.id === nodeId);
               if (!node) return Promise.resolve();
               return executeNodeWithSpan({ node, executionId, workflowId, nodeOutputs, snapshot, db });
@@ -117,10 +151,36 @@ export async function executeWorkflow(input: ExecuteWorkflowInput): Promise<void
             }
           }
 
-          // Collect outputs from completed nodes
-          for (const nodeId of level) {
-            if (nodeOutputs[nodeId] !== undefined) continue; // already set
-            // outputs are set inside executeNodeWithSpan via nodeOutputs ref
+          // After this level, check if any condition nodes completed and propagate branch skips
+          for (const nodeId of nodesToRun) {
+            const node = snapshot.nodes.find((n) => n.id === nodeId);
+            if (!node || node.type !== 'condition') continue;
+
+            const output = nodeOutputs[nodeId] as Record<string, unknown> | undefined;
+            if (output === undefined) continue; // node may have failed
+
+            const conditionResult = Boolean(output.conditionResult);
+            const dagNode = dag.nodes.get(nodeId);
+            if (!dagNode) continue;
+
+            for (const edge of dagNode.outgoingEdges) {
+              if (edge.conditionExpression === null || edge.conditionExpression === undefined || edge.conditionExpression.trim() === '') {
+                // No condition expression on edge → always fires
+                continue;
+              }
+              // Edge fires only when its conditionExpression matches the boolean result
+              const edgeShouldFire = edge.conditionExpression.trim() === String(conditionResult);
+              if (!edgeShouldFire) {
+                skippedNodes.add(edge.targetNodeId);
+                // Recursively skip everything reachable solely through skipped nodes
+                propagateSkip(dag, edge.targetNodeId, skippedNodes);
+              }
+            }
+
+            logger.info(
+              { nodeId, conditionResult, skippedCount: skippedNodes.size },
+              'condition branch evaluated'
+            );
           }
         }
 
@@ -360,4 +420,31 @@ async function executeNodeWithSpan(input: ExecuteNodeWithSpanInput): Promise<voi
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Recursively marks downstream nodes as skipped when ALL of their incoming
+ * edges originate from already-skipped nodes.
+ *
+ * This ensures a node with two parents (one skipped, one not) still executes —
+ * it only gets skipped if every path leading into it was skipped.
+ */
+function propagateSkip(dag: DAGGraph, startNodeId: string, skippedNodes: Set<string>): void {
+  const dagNode = dag.nodes.get(startNodeId);
+  if (!dagNode) return;
+
+  for (const edge of dagNode.outgoingEdges) {
+    const targetNode = dag.nodes.get(edge.targetNodeId);
+    if (!targetNode) continue;
+
+    // Skip target only if every incoming edge comes from a skipped node
+    const allParentsSkipped = targetNode.incomingEdges.every((inEdge) =>
+      skippedNodes.has(inEdge.sourceNodeId)
+    );
+
+    if (allParentsSkipped && !skippedNodes.has(edge.targetNodeId)) {
+      skippedNodes.add(edge.targetNodeId);
+      propagateSkip(dag, edge.targetNodeId, skippedNodes);
+    }
+  }
 }

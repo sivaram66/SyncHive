@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
   addEdge, useNodesState, useEdgesState,
@@ -23,33 +23,71 @@ interface Props {
   onNodeSelect?: (node: WorkflowNode | null) => void
 }
 
-export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
+/** Returns edge visual properties based on whether it carries a condition expression */
+function buildEdgeProps(condExpr: string | null | undefined, isConditionSource: boolean): Partial<Edge> {
+  if (!isConditionSource || !condExpr) {
+    return {
+      animated: true,
+      label: undefined,
+      style: { stroke: 'rgba(59,130,246,0.55)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+    }
+  }
+  const isTrue = condExpr.trim() === 'true'
+  return {
+    animated: true,
+    label: condExpr.trim(),
+    labelStyle: { fill: '#fff', fontWeight: 700, fontSize: 11 },
+    labelBgStyle: {
+      fill: isTrue ? 'rgba(22,163,74,0.85)' : 'rgba(220,38,38,0.85)',
+      rx: 4,
+      ry: 4,
+    },
+    style: {
+      stroke: isTrue ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)',
+      strokeWidth: 2,
+      strokeDasharray: '5 4',
+    },
+  }
+}
+
+export function WorkflowCanvas({ workflow, onNodeSelect, onRefetch }: Props) {
   const { nodeStatuses } = useExecutionLiveStore()
 
+  // Edge branch picker state
+  const [edgeMenu, setEdgeMenu] = useState<{ edgeId: string } | null>(null)
+
+  /* ── Build a set of condition node IDs for quick lookup ── */
+  const conditionNodeIds = useMemo(
+    () => new Set((workflow.nodes ?? []).filter((n) => n.type === 'condition').map((n) => n.id)),
+    [workflow.nodes]
+  )
+
   /* ── Convert backend nodes → React Flow nodes ── */
-  const initialNodes: Node<FlowNodeData>[] = useMemo(() => {
-    return (workflow.nodes ?? []).map((n) => ({
-      id: n.id,
-      type: 'workflowNode',
-      position: n.position ?? { x: 0, y: 0 },
-      data: {
-        workflowNode: n,
-        executionStatus: nodeStatuses[n.id] as StepStatus | undefined,
-      },
-    }))
-  }, [workflow.nodes, nodeStatuses])
+  const initialNodes: Node<FlowNodeData>[] = useMemo(
+    () =>
+      (workflow.nodes ?? []).map((n) => ({
+        id: n.id,
+        type: 'workflowNode',
+        position: n.position ?? { x: 0, y: 0 },
+        data: {
+          workflowNode: n,
+          executionStatus: nodeStatuses[n.id] as StepStatus | undefined,
+        },
+      })),
+    [workflow.nodes, nodeStatuses]
+  )
 
   /* ── Convert backend edges → React Flow edges ── */
-  const initialEdges: Edge[] = useMemo(() => {
-    return (workflow.edges ?? []).map((e) => ({
-      id: e.id,
-      source: e.sourceNodeId,
-      target: e.targetNodeId,
-      label: e.label ?? undefined,
-      animated: true,
-      style: { stroke: 'rgba(59,130,246,0.55)', strokeWidth: 1.5, strokeDasharray: '5 4' },
-    }))
-  }, [workflow.edges])
+  const initialEdges: Edge[] = useMemo(
+    () =>
+      (workflow.edges ?? []).map((e) => ({
+        id: e.id,
+        source: e.sourceNodeId,
+        target: e.targetNodeId,
+        ...buildEdgeProps(e.conditionExpression, conditionNodeIds.has(e.sourceNodeId)),
+      })),
+    [workflow.edges, conditionNodeIds]
+  )
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
@@ -85,13 +123,13 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
           targetNodeId: connection.target,
         })
         if (res.success && res.data) {
+          const isCondSrc = conditionNodeIds.has(connection.source)
           setEdges((eds) =>
             addEdge(
               {
                 ...connection,
                 id: res.data!.id,
-                animated: true,
-                style: { stroke: 'rgba(59,130,246,0.55)', strokeWidth: 1.5, strokeDasharray: '5 4' },
+                ...buildEdgeProps(null, isCondSrc),
               },
               eds
             )
@@ -101,15 +139,48 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
         console.error('Failed to create edge')
       }
     },
-    [workflow.id, setEdges]
+    [workflow.id, setEdges, conditionNodeIds]
   )
 
-  /* ── Delete edge on selection + backspace ── */
+  /* ── Delete edge on Backspace ── */
   const onEdgesDelete = useCallback(
     async (deleted: Edge[]) => {
       await Promise.all(deleted.map((e) => edgesApi.delete(workflow.id, e.id)))
     },
     [workflow.id]
+  )
+
+  /* ── Edge click → open branch picker if source is a condition node ── */
+  const onEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      if (conditionNodeIds.has(edge.source)) {
+        setEdgeMenu({ edgeId: edge.id })
+      }
+    },
+    [conditionNodeIds]
+  )
+
+  /* ── Set / clear branch label on edge ── */
+  const setBranch = useCallback(
+    async (branch: 'true' | 'false' | null) => {
+      if (!edgeMenu) return
+      try {
+        await edgesApi.update(workflow.id, edgeMenu.edgeId, { conditionExpression: branch })
+        setEdges((eds) =>
+          eds.map((e) =>
+            e.id === edgeMenu.edgeId
+              ? { ...e, ...buildEdgeProps(branch, true) }
+              : e
+          )
+        )
+        onRefetch?.()
+      } catch {
+        console.error('Failed to update edge branch')
+      } finally {
+        setEdgeMenu(null)
+      }
+    },
+    [edgeMenu, workflow.id, setEdges, onRefetch]
   )
 
   /* ── Node click → open config panel ── */
@@ -120,9 +191,10 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
     [onNodeSelect]
   )
 
-  /* ── Click canvas blank area → deselect ── */
+  /* ── Click canvas blank area → deselect + close menus ── */
   const onPaneClick = useCallback(() => {
     onNodeSelect?.(null)
+    setEdgeMenu(null)
   }, [onNodeSelect])
 
   return (
@@ -136,6 +208,7 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
         onNodeDragStop={onNodeDragStop}
         onEdgesDelete={onEdgesDelete}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
@@ -158,6 +231,62 @@ export function WorkflowCanvas({ workflow, onNodeSelect }: Props) {
           style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border-2)' }}
         />
       </ReactFlow>
+
+      {/* ── Edge branch picker popup ── */}
+      {edgeMenu && (
+        <div style={{
+          position: 'absolute',
+          bottom: 24,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+          background: 'var(--bg-elevated, #1e1e2e)',
+          border: '1px solid var(--border-2, rgba(255,255,255,0.12))',
+          borderRadius: 10,
+          padding: '12px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          minWidth: 230,
+        }}>
+          <div style={{ fontSize: 11, color: 'var(--t3, rgba(255,255,255,0.45))', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Condition branch
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setBranch('true')}
+              style={{
+                flex: 1, padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
+                background: 'rgba(22,163,74,0.18)', color: '#4ade80', fontWeight: 700, fontSize: 13,
+                border: '1px solid rgba(34,197,94,0.4)',
+              }}
+            >
+              ✓ True
+            </button>
+            <button
+              onClick={() => setBranch('false')}
+              style={{
+                flex: 1, padding: '7px 10px', borderRadius: 6, cursor: 'pointer',
+                background: 'rgba(220,38,38,0.18)', color: '#f87171', fontWeight: 700, fontSize: 13,
+                border: '1px solid rgba(239,68,68,0.4)',
+              }}
+            >
+              ✗ False
+            </button>
+          </div>
+          <button
+            onClick={() => setBranch(null)}
+            style={{
+              padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+              border: '1px solid var(--border-2, rgba(255,255,255,0.1))',
+              background: 'transparent', color: 'var(--t3, rgba(255,255,255,0.4))', fontSize: 12,
+            }}
+          >
+            Clear branch label
+          </button>
+        </div>
+      )}
     </div>
   )
 }

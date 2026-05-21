@@ -101,6 +101,9 @@ export const edgesApi = {
   }) =>
     api.post<ApiResponse<WorkflowEdge>>(`/workflows/${workflowId}/edges`, payload).then(r => r.data),
 
+  update: (workflowId: string, edgeId: string, payload: { conditionExpression: string | null }) =>
+    api.patch<ApiResponse<WorkflowEdge>>(`/workflows/${workflowId}/edges/${edgeId}`, payload).then(r => r.data),
+
   delete: (workflowId: string, edgeId: string) =>
     api.delete<ApiResponse<null>>(`/workflows/${workflowId}/edges/${edgeId}`).then(r => r.data),
 }

@@ -559,6 +559,59 @@ workflowRouter.post(
   }
 );
 
+// Update an edge (set conditionExpression for condition branching)
+workflowRouter.patch(
+  "/:workflowId/edges/:edgeId",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const workflowId = req.params.workflowId as string;
+      const edgeId = req.params.edgeId as string;
+
+      // Verify workflow ownership
+      const [workflow] = await db
+        .select({ id: workflows.id })
+        .from(workflows)
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.createdBy, req.user!.userId)
+          )
+        )
+        .limit(1);
+
+      if (!workflow) {
+        throw new AppError(404, "WORKFLOW_NOT_FOUND", "Workflow not found");
+      }
+
+      const { conditionExpression } = req.body as { conditionExpression: string | null };
+
+      const [updated] = await db
+        .update(workflowEdges)
+        .set({ conditionExpression: conditionExpression ?? null })
+        .where(
+          and(
+            eq(workflowEdges.id, edgeId),
+            eq(workflowEdges.workflowId, workflowId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new AppError(404, "EDGE_NOT_FOUND", "Edge not found");
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        data: updated,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Delete an edge
 workflowRouter.delete(
   "/:workflowId/edges/:edgeId",
