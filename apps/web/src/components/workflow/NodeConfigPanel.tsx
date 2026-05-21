@@ -273,6 +273,19 @@ function TriggerConfig({ config, set }: ConfigProps) {
         </Field>
       )}
 
+      {trigType === 'webhook' && (
+        <Field label="Webhook secret" hint="Optional. If set, incoming requests must include a valid X-Hub-Signature-256 header (HMAC-SHA256). Recommended for GitHub webhooks.">
+          <input
+            className={styles.input}
+            type="password"
+            value={String(config.webhookSecret ?? '')}
+            onChange={(e) => set('webhookSecret', e.target.value || undefined)}
+            placeholder="my-secret-token"
+            autoComplete="new-password"
+          />
+        </Field>
+      )}
+
       {trigType === 'schedule' && (
         <Field label="Cron expression" hint="e.g. 0 9 * * 1-5 (weekdays at 9am)">
           <input

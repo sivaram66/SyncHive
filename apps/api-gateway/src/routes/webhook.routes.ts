@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { eq, and } from "drizzle-orm";
+import { createHmac, timingSafeEqual } from "crypto";
 import {
   workflows,
   workflowNodes,
@@ -8,14 +9,33 @@ import {
 } from "@synchive/db";
 import { ApiResponse } from "@synchive/shared-types";
 import { db } from "../services/db.service";
-// import { executionQueue } from "../services/queue.service";
 import { enqueueExecution, ExecutionJobData, getRedisConnection } from "@synchive/queue";
 import { createLogger } from "@synchive/logger";
 import { AppError } from "../middleware/error-handler";
 
 const logger = createLogger({ service: "api-gateway" });
-// 24-hour TTL for delivery deduplication keys
 const DELIVERY_DEDUP_TTL_SECONDS = 24 * 60 * 60;
+
+/**
+ * Verify GitHub-style HMAC-SHA256 webhook signature.
+ * Header format: "sha256=<hex-digest>"
+ * Uses timingSafeEqual to prevent timing-based attacks.
+ */
+function verifyWebhookSignature(
+  secret: string,
+  rawBody: Buffer,
+  signatureHeader: string | undefined
+): boolean {
+  if (!signatureHeader) return false;
+  const [algo, receivedHex] = signatureHeader.split("=");
+  if (algo !== "sha256" || !receivedHex) return false;
+  const expectedHex = createHmac("sha256", secret).update(rawBody).digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(receivedHex, "hex"), Buffer.from(expectedHex, "hex"));
+  } catch {
+    return false; // buffer length mismatch = invalid
+  }
+}
 
 
 export const webhookRouter = Router();
@@ -89,6 +109,29 @@ webhookRouter.post(
           return;
         }
         throw new AppError(404, "WEBHOOK_NOT_FOUND", "No workflow registered for this webhook path");
+      }
+
+      // ── Signature verification ──────────────────────────────────────────────
+      // If the trigger node has config.webhookSecret set, verify HMAC-SHA256.
+      // Supports: X-Hub-Signature-256 (GitHub), X-Signature-256, X-Webhook-Signature
+      const nodeConfig = matchedNode.config as Record<string, unknown>;
+      const webhookSecret = nodeConfig.webhookSecret as string | undefined;
+
+      if (webhookSecret) {
+        const signatureHeader =
+          (req.headers['x-hub-signature-256'] as string | undefined) ||
+          (req.headers['x-signature-256']     as string | undefined) ||
+          (req.headers['x-webhook-signature'] as string | undefined);
+
+        // Use rawBody buffer stored by Express bodyParser (see app.ts verify callback)
+        const rawBody: Buffer = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body));
+
+        const isValid = verifyWebhookSignature(webhookSecret, rawBody, signatureHeader);
+        if (!isValid) {
+          logger.warn({ path: fullPath, hasSignatureHeader: !!signatureHeader }, "Webhook signature verification failed");
+          throw new AppError(401, "INVALID_SIGNATURE", "Webhook signature verification failed");
+        }
+        logger.info({ path: fullPath }, "Webhook signature verified ✓");
       }
 
       // Verify the workflow is active
