@@ -18,7 +18,7 @@ export const workflowExecutions = pgTable(
       .references(() => workflows.id, { onDelete: "cascade" })
       .notNull(),
     versionId: uuid("version_id")
-      .references(() => workflowVersions.id)
+      .references(() => workflowVersions.id, { onDelete: "cascade" })
       .notNull(),
     status: executionStatusEnum("status").default("pending").notNull(),
     triggerData: jsonb("trigger_data"), // input that started this execution
@@ -45,7 +45,7 @@ export const stepExecutions = pgTable(
       .references(() => workflowExecutions.id, { onDelete: "cascade" })
       .notNull(),
     nodeId: uuid("node_id")
-      .references(() => workflowNodes.id)
+      .references(() => workflowNodes.id, { onDelete: "cascade" })   // was missing cascade!
       .notNull(),
     status: stepStatusEnum("status").default("pending").notNull(),
     input: jsonb("input"),

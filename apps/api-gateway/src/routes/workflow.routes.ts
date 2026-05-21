@@ -1,11 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   workflows,
   workflowNodes,
   workflowEdges,
   workflowVersions,
   workflowExecutions,
+  stepExecutions,
 } from "@synchive/db";
 import { ApiResponse, WorkflowSnapshot } from "@synchive/shared-types";
 import { authenticate } from "../middleware/auth";
@@ -166,30 +167,80 @@ workflowRouter.patch(
   }
 );
 
-// Delete a workflow
+// Delete a workflow (cascades through all child records)
 workflowRouter.delete(
   "/:workflowId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const workflowId = req.params.workflowId as string;
 
-      const [deleted] = await db
-        .delete(workflows)
+      // Verify ownership first
+      const [workflow] = await db
+        .select({ id: workflows.id, name: workflows.name })
+        .from(workflows)
         .where(
           and(
             eq(workflows.id, workflowId),
             eq(workflows.createdBy, req.user!.userId)
           )
         )
-        .returning();
+        .limit(1);
 
-      if (!deleted) {
+      if (!workflow) {
         throw new AppError(404, "WORKFLOW_NOT_FOUND", "Workflow not found");
       }
 
+      // Delete in correct dependency order to avoid FK constraint violations:
+      // 1. step_executions  (references workflow_nodes AND workflow_executions)
+      // 2. workflow_executions  (references workflows + workflow_versions)
+      // 3. workflow_versions    (references workflows)
+      // 4. workflow_edges       (references workflow_nodes + workflows)
+      // 5. workflow_nodes       (references workflows)
+      // 6. workflows            (the parent)
+
+      // Get all execution IDs for this workflow
+      const executions = await db
+        .select({ id: workflowExecutions.id })
+        .from(workflowExecutions)
+        .where(eq(workflowExecutions.workflowId, workflowId));
+
+      const executionIds = executions.map((e) => e.id);
+
+      // 1. Delete step_executions for all executions of this workflow
+      if (executionIds.length > 0) {
+        await db
+          .delete(stepExecutions)
+          .where(inArray(stepExecutions.executionId, executionIds));
+      }
+
+      // 2. Delete workflow_executions
+      await db
+        .delete(workflowExecutions)
+        .where(eq(workflowExecutions.workflowId, workflowId));
+
+      // 3. Delete workflow_versions
+      await db
+        .delete(workflowVersions)
+        .where(eq(workflowVersions.workflowId, workflowId));
+
+      // 4. Delete workflow_edges
+      await db
+        .delete(workflowEdges)
+        .where(eq(workflowEdges.workflowId, workflowId));
+
+      // 5. Delete workflow_nodes
+      await db
+        .delete(workflowNodes)
+        .where(eq(workflowNodes.workflowId, workflowId));
+
+      // 6. Delete the workflow itself
+      await db
+        .delete(workflows)
+        .where(eq(workflows.id, workflowId));
+
       const response: ApiResponse = {
         success: true,
-        data: { id: deleted.id, deleted: true },
+        data: { id: workflowId, deleted: true },
       };
 
       res.json(response);
@@ -198,6 +249,7 @@ workflowRouter.delete(
     }
   }
 );
+
 
 // ==================== ACTIVATE WORKFLOW ====================
 

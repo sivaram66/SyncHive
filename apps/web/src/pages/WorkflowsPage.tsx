@@ -203,8 +203,16 @@ function WorkflowCard({ workflow, index, onClick, onRefetch }: {
   async function handleDelete(e: React.MouseEvent) {
     e.stopPropagation()
     if (!confirm(`Delete "${workflow.name}"?`)) return
-    await workflowsApi.delete(workflow.id)
-    onRefetch()
+    try {
+      const res = await workflowsApi.delete(workflow.id)
+      if (res?.success) {
+        onRefetch()
+      } else {
+        alert(`Failed to delete workflow: ${res?.error ?? 'Unknown error'}`)
+      }
+    } catch (err: any) {
+      alert(`Failed to delete: ${err?.response?.data?.message ?? err?.message ?? 'Server error'}`)
+    }
   }
 
   return (
