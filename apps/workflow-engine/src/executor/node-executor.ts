@@ -52,6 +52,9 @@ export async function executeNode(
     case "loop":
       return executeLoop(resolvedConfig, input);
 
+    case "delay":
+      return executeDelay(resolvedConfig);
+
     default:
       return {
         success: false,
@@ -419,6 +422,38 @@ async function executeLoop(
       iteratedOver:   resolvedKey,
       [itemVar]:      limited[0] ?? null,    // convenience: first item for downstream
       loopResults:    results,
+    },
+  };
+}
+
+// ─── DELAY ──────────────────────────────────────────────────────
+
+async function executeDelay(config: Record<string, unknown>): Promise<NodeResult> {
+  const unit   = String(config.unit   ?? "seconds");
+  const amount = Number(config.amount ?? 5);
+
+  const multiplier: Record<string, number> = {
+    ms:      1,
+    seconds: 1_000,
+    minutes: 60_000,
+    hours:   3_600_000,
+  };
+
+  const delayMs = amount * (multiplier[unit] ?? 1_000);
+
+  // Cap at 5 minutes in the worker to avoid blocking; for longer delays
+  // the job should be re-queued via BullMQ delay option (future feature).
+  const actualMs = Math.min(delayMs, 5 * 60_000);
+
+  const resumedAt = new Date(Date.now() + actualMs).toISOString();
+  await new Promise<void>((resolve) => setTimeout(resolve, actualMs));
+
+  return {
+    success: true,
+    output: {
+      delayedMs:  actualMs,
+      requestedMs: delayMs,
+      resumedAt,
     },
   };
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { useAuthStore, useThemeStore } from '@/lib/store'
 import { TopNav } from '@/components/layout/TopNav'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { ToastProvider } from '@/components/layout/ToastProvider'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { SignupPage } from '@/pages/SignupPage'
@@ -47,6 +48,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeSync />
+      <ToastProvider />
       <Routes>
         {/* Public — no auth required */}
         <Route path="/"       element={<LandingPage />} />

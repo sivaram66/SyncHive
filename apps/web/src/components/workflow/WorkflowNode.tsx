@@ -54,6 +54,14 @@ const NODE_META: Record<NodeType, { label: string; icon: React.ReactNode }> = {
       </svg>
     ),
   },
+  delay: {
+    label: 'Delay',
+    icon: (
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6" cy="6" r="5"/><path d="M6 3v3l2 2"/>
+      </svg>
+    ),
+  },
 }
 
 const STATUS_LABELS: Record<StepStatus, string> = {

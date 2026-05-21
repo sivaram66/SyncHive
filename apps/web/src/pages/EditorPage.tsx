@@ -256,6 +256,7 @@ export function EditorPage() {
                 key={selectedNode.id}
                 node={selectedNode}
                 workflowId={workflow.id}
+                upstreamNodes={(workflow.nodes ?? []).filter(n => n.id !== selectedNode.id)}
                 onClose={() => setSelectedNode(null)}
                 onSaved={refetch}
               />
@@ -371,13 +372,14 @@ function ExecutionRow({ execution, isActive, onSelect }: {
 }
 
 /* ── Add Node Modal ── */
-const NODE_TYPES: { type: NodeType; label: string; desc: string }[] = [
-  { type: 'trigger',     label: 'Trigger',     desc: 'Webhook or schedule start' },
-  { type: 'action',      label: 'Action',      desc: 'HTTP, email, Slack, etc.' },
-  { type: 'condition',   label: 'Condition',   desc: 'Branch on expression result' },
-  { type: 'ai',          label: 'AI Node',     desc: 'LLM call with prompt' },
-  { type: 'transformer', label: 'Transformer', desc: 'Pick, merge, rename fields' },
-  { type: 'loop',        label: 'Loop',        desc: 'Iterate over an array' },
+const NODE_TYPES: { type: NodeType; label: string; desc: string; color: string }[] = [
+  { type: 'trigger',     label: 'Trigger',     desc: 'Webhook or schedule start',   color: '#10b981' },
+  { type: 'action',      label: 'Action',      desc: 'HTTP, email, Slack, etc.',    color: '#3b82f6' },
+  { type: 'condition',   label: 'Condition',   desc: 'Branch on expression result', color: '#8b5cf6' },
+  { type: 'ai',          label: 'AI Node',     desc: 'LLM call with prompt',        color: '#f59e0b' },
+  { type: 'transformer', label: 'Transformer', desc: 'Pick, merge, rename fields',  color: '#06b6d4' },
+  { type: 'loop',        label: 'Loop',        desc: 'Iterate over an array',       color: '#f97316' },
+  { type: 'delay',       label: 'Delay',       desc: 'Wait before next step',       color: '#6366f1' },
 ]
 
 function AddNodeModal({ workflowId, onClose, onAdded }: {
@@ -438,8 +440,9 @@ function AddNodeModal({ workflowId, onClose, onAdded }: {
                 key={nt.type}
                 className={clsx(styles.typeCard, type === nt.type && styles.typeCardActive)}
                 onClick={() => setType(nt.type)}
+                style={{ '--node-type-color': nt.color } as React.CSSProperties}
               >
-                <span className={styles.typeLabel}>{nt.label}</span>
+                <span className={styles.typeLabel} style={{ color: type === nt.type ? nt.color : undefined }}>{nt.label}</span>
                 <span className={styles.typeDesc}>{nt.desc}</span>
               </button>
             ))}

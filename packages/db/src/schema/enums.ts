@@ -15,6 +15,7 @@ export const nodeTypeEnum = pgEnum("node_type", [
   "ai",
   "transformer",
   "webhook",
+  "delay",
 ]);
 
 export const executionStatusEnum = pgEnum("execution_status", [

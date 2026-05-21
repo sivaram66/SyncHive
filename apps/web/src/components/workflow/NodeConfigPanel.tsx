@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { WorkflowNode, NodeType } from '@/types'
 import { nodesApi } from '@/lib/api'
+import { VariablePicker } from './VariablePicker'
 import styles from './NodeConfigPanel.module.css'
 
 /* ─── Props ──────────────────────────────────────────────────── */
 interface Props {
   node: WorkflowNode
   workflowId: string
+  upstreamNodes?: WorkflowNode[]   // nodes before this one — for variable picker
   onClose: () => void
   onSaved: () => void
 }
@@ -68,6 +70,15 @@ const NODE_TYPE_META: Record<NodeType, { label: string; color: string; icon: Rea
       </svg>
     ),
   },
+  delay: {
+    label: 'Delay',
+    color: '#6366f1',
+    icon: (
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="6.5" cy="6.5" r="5.5"/><path d="M6.5 3.5v3l2 2"/>
+      </svg>
+    ),
+  },
 }
 
 /* ─── Action sub-types (stored in config.integration) ─────────── */
@@ -80,7 +91,7 @@ const ACTION_INTEGRATIONS = [
 ] as const
 
 /* ─── Root component ─────────────────────────────────────────── */
-export function NodeConfigPanel({ node, workflowId, onClose, onSaved }: Props) {
+export function NodeConfigPanel({ node, workflowId, upstreamNodes = [], onClose, onSaved }: Props) {
   const meta = NODE_TYPE_META[node.type]
   const [saving,  setSaving]  = useState(false)
   const [saved,   setSaved]   = useState(false)
@@ -165,12 +176,13 @@ export function NodeConfigPanel({ node, workflowId, onClose, onSaved }: Props) {
 
         {/* Type-specific config */}
         <Section title="Configuration">
-          {node.type === 'trigger' && <TriggerConfig config={config} set={setConfigKey} />}
-          {node.type === 'action'  && <ActionConfig  config={config} set={setConfigKey} />}
-          {node.type === 'condition' && <ConditionConfig config={config} set={setConfigKey} />}
-          {node.type === 'ai'      && <AiConfig      config={config} set={setConfigKey} />}
-          {node.type === 'transformer' && <TransformerConfig config={config} set={setConfigKey} />}
-          {node.type === 'loop'    && <LoopConfig    config={config} set={setConfigKey} />}
+          {node.type === 'trigger'     && <TriggerConfig     config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'action'      && <ActionConfig      config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'condition'   && <ConditionConfig   config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'ai'          && <AiConfig          config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'transformer' && <TransformerConfig config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'loop'        && <LoopConfig        config={config} set={setConfigKey} upstream={upstreamNodes} />}
+          {node.type === 'delay'       && <DelayConfig       config={config} set={setConfigKey} upstream={upstreamNodes} />}
         </Section>
 
         {/* Retry + timeout */}
@@ -321,7 +333,8 @@ function ActionConfig({ config, set }: ConfigProps) {
   )
 }
 
-function HttpFields({ config, set }: ConfigProps) {
+function HttpFields({ config, set, upstream }: ConfigProps) {
+  const urlRef = useRef<HTMLInputElement>(null)
   return (
     <>
       <div className={styles.row2}>
@@ -348,12 +361,15 @@ function HttpFields({ config, set }: ConfigProps) {
         </Field>
       </div>
       <Field label="URL" hint="Supports {{variable}} templates">
-        <input
-          className={styles.input}
-          value={String(config.url ?? '')}
-          onChange={(e) => set('url', e.target.value)}
-          placeholder="https://api.example.com/endpoint"
-        />
+        <WithPicker upstream={upstream} targetRef={urlRef} onInsert={v => set('url', (config.url as string ?? '') + v)}>
+          <input
+            ref={urlRef}
+            className={styles.input}
+            value={String(config.url ?? '')}
+            onChange={(e) => set('url', e.target.value)}
+            placeholder="https://api.example.com/endpoint"
+          />
+        </WithPicker>
       </Field>
       <Field label="Headers (JSON)">
         <JsonTextarea
@@ -374,7 +390,8 @@ function HttpFields({ config, set }: ConfigProps) {
   )
 }
 
-function EmailFields({ config, set }: ConfigProps) {
+function EmailFields({ config, set, upstream }: ConfigProps) {
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
   return (
     <>
       <Field label="To" hint="Supports {{variable}} templates">
@@ -384,13 +401,16 @@ function EmailFields({ config, set }: ConfigProps) {
         <input className={styles.input} value={String(config.subject ?? '')} onChange={(e) => set('subject', e.target.value)} placeholder="Hello {{name}}" />
       </Field>
       <Field label="Body">
-        <textarea className={styles.textarea} rows={5} value={String(config.body ?? '')} onChange={(e) => set('body', e.target.value)} placeholder="Hi {{name}}, your request has been processed." />
+        <WithPicker upstream={upstream} targetRef={bodyRef}>
+          <textarea ref={bodyRef} className={styles.textarea} rows={5} value={String(config.body ?? '')} onChange={(e) => set('body', e.target.value)} placeholder="Hi {{name}}, your request has been processed." />
+        </WithPicker>
       </Field>
     </>
   )
 }
 
-function SlackFields({ config, set }: ConfigProps) {
+function SlackFields({ config, set, upstream }: ConfigProps) {
+  const msgRef = useRef<HTMLTextAreaElement>(null)
   return (
     <>
       <Field label="Webhook URL">
@@ -400,20 +420,25 @@ function SlackFields({ config, set }: ConfigProps) {
         <input className={styles.input} value={String(config.channel ?? '')} onChange={(e) => set('channel', e.target.value)} placeholder="#deployments" />
       </Field>
       <Field label="Message" hint="Supports {{variable}} templates">
-        <textarea className={styles.textarea} rows={4} value={String(config.message ?? '')} onChange={(e) => set('message', e.target.value)} placeholder="🚀 Deploy succeeded for {{repo}}" />
+        <WithPicker upstream={upstream} targetRef={msgRef}>
+          <textarea ref={msgRef} className={styles.textarea} rows={4} value={String(config.message ?? '')} onChange={(e) => set('message', e.target.value)} placeholder="🚀 Deploy succeeded for {{repo}}" />
+        </WithPicker>
       </Field>
     </>
   )
 }
 
-function DiscordFields({ config, set }: ConfigProps) {
+function DiscordFields({ config, set, upstream }: ConfigProps) {
+  const msgRef = useRef<HTMLTextAreaElement>(null)
   return (
     <>
       <Field label="Webhook URL">
         <input className={styles.input} value={String(config.webhookUrl ?? '')} onChange={(e) => set('webhookUrl', e.target.value)} placeholder="https://discord.com/api/webhooks/..." />
       </Field>
       <Field label="Message" hint="Supports {{variable}} templates">
-        <textarea className={styles.textarea} rows={4} value={String(config.message ?? '')} onChange={(e) => set('message', e.target.value)} placeholder="New event: {{type}}" />
+        <WithPicker upstream={upstream} targetRef={msgRef}>
+          <textarea ref={msgRef} className={styles.textarea} rows={4} value={String(config.message ?? '')} onChange={(e) => set('message', e.target.value)} placeholder="New event: {{type}}" />
+        </WithPicker>
       </Field>
     </>
   )
@@ -427,17 +452,21 @@ function GenericFields({ config, set }: ConfigProps) {
   )
 }
 
-function ConditionConfig({ config, set }: ConfigProps) {
+function ConditionConfig({ config, set, upstream }: ConfigProps) {
+  const exprRef = useRef<HTMLTextAreaElement>(null)
   return (
     <>
       <Field label="Condition expression" hint="Returns true/false. Supports {{variable}} and JS operators.">
-        <textarea
-          className={styles.textarea}
-          rows={3}
-          value={String(config.expression ?? '')}
-          onChange={(e) => set('expression', e.target.value)}
-          placeholder="{{status}} === 'success' && {{count}} > 0"
-        />
+        <WithPicker upstream={upstream} targetRef={exprRef}>
+          <textarea
+            ref={exprRef}
+            className={styles.textarea}
+            rows={3}
+            value={String(config.expression ?? '')}
+            onChange={(e) => set('expression', e.target.value)}
+            placeholder="{{status}} === 'success' && {{count}} > 0"
+          />
+        </WithPicker>
       </Field>
       <Field label="True branch label">
         <input className={styles.input} value={String(config.trueLabel ?? 'true')} onChange={(e) => set('trueLabel', e.target.value)} placeholder="true" />
@@ -449,7 +478,8 @@ function ConditionConfig({ config, set }: ConfigProps) {
   )
 }
 
-function AiConfig({ config, set }: ConfigProps) {
+function AiConfig({ config, set, upstream }: ConfigProps) {
+  const promptRef = useRef<HTMLTextAreaElement>(null)
   return (
     <>
       <Field label="Model">
@@ -469,7 +499,9 @@ function AiConfig({ config, set }: ConfigProps) {
         <textarea className={styles.textarea} rows={3} value={String(config.systemPrompt ?? '')} onChange={(e) => set('systemPrompt', e.target.value)} placeholder="You are a helpful assistant." />
       </Field>
       <Field label="User prompt" hint="Supports {{variable}} templates">
-        <textarea className={styles.textarea} rows={5} value={String(config.prompt ?? '')} onChange={(e) => set('prompt', e.target.value)} placeholder="Summarize the following: {{input}}" />
+        <WithPicker upstream={upstream} targetRef={promptRef}>
+          <textarea ref={promptRef} className={styles.textarea} rows={5} value={String(config.prompt ?? '')} onChange={(e) => set('prompt', e.target.value)} placeholder="Summarize the following: {{input}}" />
+        </WithPicker>
       </Field>
       <div className={styles.row2}>
         <Field label="Temperature">
@@ -507,11 +539,14 @@ function TransformerConfig({ config, set }: ConfigProps) {
   )
 }
 
-function LoopConfig({ config, set }: ConfigProps) {
+function LoopConfig({ config, set, upstream }: ConfigProps) {
+  const arrayRef = useRef<HTMLInputElement>(null)
   return (
     <>
       <Field label="Array input" hint="Path to the array to iterate. Supports {{variable}}.">
-        <input className={styles.input} value={String(config.arrayPath ?? '')} onChange={(e) => set('arrayPath', e.target.value)} placeholder="{{items}}" />
+        <WithPicker upstream={upstream} targetRef={arrayRef}>
+          <input ref={arrayRef} className={styles.input} value={String(config.arrayPath ?? '')} onChange={(e) => set('arrayPath', e.target.value)} placeholder="{{items}}" />
+        </WithPicker>
       </Field>
       <Field label="Item variable name" hint="Name to access each item inside the loop.">
         <input className={styles.input} value={String(config.itemVar ?? 'item')} onChange={(e) => set('itemVar', e.target.value)} placeholder="item" />
@@ -523,10 +558,73 @@ function LoopConfig({ config, set }: ConfigProps) {
   )
 }
 
+function DelayConfig({ config, set }: ConfigProps) {
+  const unit = String(config.unit ?? 'seconds')
+  const amount = Number(config.amount ?? 5)
+  const ms = unit === 'seconds' ? amount * 1000
+    : unit === 'minutes' ? amount * 60_000
+    : unit === 'hours'   ? amount * 3_600_000
+    : amount
+  return (
+    <>
+      <Field label="Delay amount">
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            className={styles.input}
+            type="number" min={1}
+            value={amount}
+            onChange={(e) => set('amount', Number(e.target.value))}
+            style={{ flex: 1 }}
+          />
+          <Select
+            value={unit}
+            onChange={(v) => set('unit', v)}
+            options={[
+              { value: 'seconds', label: 'Seconds' },
+              { value: 'minutes', label: 'Minutes' },
+              { value: 'hours',   label: 'Hours' },
+              { value: 'ms',      label: 'Milliseconds' },
+            ]}
+          />
+        </div>
+      </Field>
+      <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--t4)' }}>
+        ⏱ Will pause execution for <strong style={{ color: 'var(--accent-light)' }}>{ms >= 3_600_000 ? `${ms/3_600_000}h` : ms >= 60_000 ? `${ms/60_000}m` : ms >= 1000 ? `${ms/1000}s` : `${ms}ms`}</strong>
+      </div>
+    </>
+  )
+}
+
 /* ─── Shared UI primitives ───────────────────────────────────── */
 interface ConfigProps {
   config: Record<string, unknown>
   set: (key: string, value: unknown) => void
+  upstream?: WorkflowNode[]
+}
+
+/** Textarea/Input with an optional VariablePicker button above it */
+function WithPicker({
+  children,
+  upstream,
+  targetRef,
+  onInsert,
+}: {
+  children: React.ReactNode
+  upstream?: WorkflowNode[]
+  targetRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement>
+  onInsert?: (v: string) => void
+}) {
+  if (!upstream || upstream.length === 0) return <>{children}</>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <VariablePicker
+        upstreamNodes={upstream}
+        targetRef={targetRef as React.RefObject<HTMLInputElement>}
+        onInsert={onInsert ?? (() => {})}
+      />
+      {children}
+    </div>
+  )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

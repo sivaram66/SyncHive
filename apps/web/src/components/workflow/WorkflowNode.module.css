@@ -57,12 +57,13 @@
 }
 
 /* ── Type variants ──────────────────────────────────── */
-.type_trigger  { color: var(--node-trigger); }
-.type_action   { color: var(--node-http); }
-.type_condition { color: var(--node-condition); }
-.type_ai       { color: var(--node-ai); }
+.type_trigger     { color: var(--node-trigger); }
+.type_action      { color: var(--node-http); }
+.type_condition   { color: var(--node-condition); }
+.type_ai          { color: var(--node-ai); }
 .type_transformer { color: var(--node-transform); }
-.type_loop     { color: var(--node-loop); }
+.type_loop        { color: var(--node-loop); }
+.type_delay       { color: #6366f1; }
 
 /* ── Selected state ─────────────────────────────────── */
 .selected {

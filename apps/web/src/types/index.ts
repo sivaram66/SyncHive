@@ -31,7 +31,7 @@ export interface AuthResponse {
 
 /* ─── ENUMS (mirror backend enums exactly) ────────────────── */
 export type WorkflowStatus = 'draft' | 'active' | 'paused' | 'archived'
-export type NodeType = 'trigger' | 'action' | 'condition' | 'ai' | 'transformer' | 'loop'
+export type NodeType = 'trigger' | 'action' | 'condition' | 'ai' | 'transformer' | 'loop' | 'delay'
 export type TriggerType = 'webhook' | 'schedule' | 'manual' | 'event'
 export type ExecutionStatus = 'pending' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timed_out'
 export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'retrying' | 'timed_out'
