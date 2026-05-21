@@ -1,0 +1,28 @@
+# ============================================================
+# SyncHive — Workflow Engine (BullMQ Worker)
+# Runs TypeScript directly with tsx
+# ============================================================
+
+FROM node:20-alpine
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy workspace manifests
+COPY package.json package-lock.json ./
+COPY packages/db/package.json            ./packages/db/
+COPY packages/logger/package.json        ./packages/logger/
+COPY packages/queue/package.json         ./packages/queue/
+COPY packages/shared-types/package.json  ./packages/shared-types/
+COPY packages/telemetry/package.json     ./packages/telemetry/
+COPY apps/api-gateway/package.json       ./apps/api-gateway/
+COPY apps/workflow-engine/package.json   ./apps/workflow-engine/
+COPY apps/web/package.json               ./apps/web/
+
+RUN npm install --legacy-peer-deps
+
+# Copy all source
+COPY packages/ ./packages/
+COPY apps/workflow-engine/ ./apps/workflow-engine/
+
+CMD ["npx", "tsx", "apps/workflow-engine/src/index.ts"]

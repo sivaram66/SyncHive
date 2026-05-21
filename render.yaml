@@ -1,0 +1,61 @@
+# render.yaml — SyncHive Deployment Blueprint
+# Defines all services so Render can deploy everything from one file.
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  # ── 1. API Gateway + Frontend (Web Service) ──────────────────
+  - type: web
+    name: synchive-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.api
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false          # Set manually in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Render auto-generates a strong secret
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: synchive-redis
+          property: connectionString
+      - key: CORS_ORIGIN
+        sync: false          # Set to your Render URL after first deploy
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+  # ── 2. Workflow Engine Worker (Background Worker) ─────────────
+  - type: worker
+    name: synchive-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: synchive-redis
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+  # ── 3. Redis (Render managed) ─────────────────────────────────
+  - type: redis
+    name: synchive-redis
+    plan: free
+    maxmemoryPolicy: noeviction

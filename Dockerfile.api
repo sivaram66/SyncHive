@@ -1,0 +1,62 @@
+# ============================================================
+# SyncHive — API Gateway + Frontend
+# Strategy: Build React frontend with Vite, run API with tsx
+#           (avoids complex monorepo tsc linking issues)
+# ============================================================
+
+# ─── Stage 1: Build the React frontend ───────────────────────
+FROM node:20-alpine AS fe-build
+WORKDIR /app
+
+# Copy workspace manifests
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+# Dummy manifests for other workspaces (npm workspaces needs them)
+COPY packages/db/package.json            ./packages/db/
+COPY packages/logger/package.json        ./packages/logger/
+COPY packages/queue/package.json         ./packages/queue/
+COPY packages/shared-types/package.json  ./packages/shared-types/
+COPY packages/telemetry/package.json     ./packages/telemetry/
+COPY apps/api-gateway/package.json       ./apps/api-gateway/
+COPY apps/workflow-engine/package.json   ./apps/workflow-engine/
+
+RUN npm install --legacy-peer-deps
+
+# Copy web source and build
+COPY apps/web/ ./apps/web/
+COPY packages/shared-types/ ./packages/shared-types/
+
+RUN cd apps/web && npm run build
+
+# ─── Stage 2: Production API + Worker runner ──────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copy workspace manifests
+COPY package.json package-lock.json ./
+COPY packages/db/package.json            ./packages/db/
+COPY packages/logger/package.json        ./packages/logger/
+COPY packages/queue/package.json         ./packages/queue/
+COPY packages/shared-types/package.json  ./packages/shared-types/
+COPY packages/telemetry/package.json     ./packages/telemetry/
+COPY apps/api-gateway/package.json       ./apps/api-gateway/
+COPY apps/workflow-engine/package.json   ./apps/workflow-engine/
+COPY apps/web/package.json               ./apps/web/
+
+# Install ALL dependencies (including devDeps for tsx)
+RUN npm install --legacy-peer-deps
+
+# Copy all source
+COPY packages/ ./packages/
+COPY apps/api-gateway/ ./apps/api-gateway/
+COPY apps/workflow-engine/ ./apps/workflow-engine/
+
+# Copy built frontend into the API's public folder
+COPY --from=fe-build /app/apps/web/dist ./apps/api-gateway/public
+
+EXPOSE 4000
+
+# tsx runs TypeScript directly — no tsc compile step needed
+CMD ["npx", "tsx", "apps/api-gateway/src/index.ts"]

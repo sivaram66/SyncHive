@@ -4,6 +4,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
 import { config } from "./config";
 import { errorHandler } from "./middleware/error-handler";
 import { authRouter } from "./routes/auth.routes";
@@ -13,10 +15,19 @@ import { healthRouter } from "./routes/health.routes";
 import { executionRouter } from "./routes/execution.routes";
 import { schedulerRouter } from "./routes/scheduler.routes";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+
+// In production (Docker), public is at apps/api-gateway/public
+// __dirname is either .../src or .../dist — both are one level deep
+const frontendPublicPath = path.join(__dirname, "..", "public");
+
 export const app = express();
 
 // --------------- Security middleware ---------------
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // allow Vite assets
+}));
 app.use(
   cors({
     origin: config.corsOrigin,
@@ -72,13 +83,31 @@ app.use(
   })
 );
 
-// --------------- Routes ---------------
+// --------------- API Routes (always matched first) ---------------
 app.use("/health",          healthRouter);
 app.use("/api/auth",        authLimiter, authRouter);
 app.use("/api/workflows",   apiLimiter, workflowRouter);
 app.use("/api/executions",  apiLimiter, executionRouter);
 app.use("/api/scheduler",   apiLimiter, schedulerRouter);
 app.use("/hooks",           webhookLimiter, webhookRouter);
+
+// --------------- Serve built React frontend ---------------
+// The Vite build output is placed in apps/api-gateway/public during Docker build
+app.use(express.static(frontendPublicPath));
+
+// --------------- SPA Fallback (fixes page refresh) ---------------
+// Any route that is NOT an API route returns index.html so React Router handles it
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api") || req.path.startsWith("/hooks") || req.path === "/health") {
+    return next();
+  }
+  res.sendFile(path.join(frontendPublicPath, "index.html"), (err) => {
+    if (err) {
+      // In dev mode the public folder may not exist — that's fine
+      res.status(200).send("SyncHive API running. Frontend not bundled in dev mode.");
+    }
+  });
+});
 
 // --------------- Error handling ---------------
 app.use(errorHandler);
