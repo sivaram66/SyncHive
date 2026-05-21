@@ -98,9 +98,14 @@ app.use(express.static(frontendPublicPath));
 // --------------- SPA Fallback (fixes page refresh) ---------------
 // Any route that is NOT an API route returns index.html so React Router handles it
 app.get("*", (req, res, next) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/hooks") || req.path === "/health") {
+  if (
+    req.path.startsWith("/api") ||
+    req.path.startsWith("/hooks") ||
+    req.path.startsWith("/health")
+  ) {
     return next();
   }
+
   res.sendFile(path.join(frontendPublicPath, "index.html"), (err) => {
     if (err) {
       // In dev mode the public folder may not exist — that's fine
