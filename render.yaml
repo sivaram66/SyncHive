@@ -7,7 +7,7 @@ services:
   - type: web
     name: synchive-api
     runtime: docker
-    dockerfilePath: ./Dockerfile.api
+    dockerfilePath: ./infra/Dockerfile.api
     dockerContext: .
     plan: free
     healthCheckPath: /health
@@ -36,7 +36,7 @@ services:
   - type: worker
     name: synchive-worker
     runtime: docker
-    dockerfilePath: ./Dockerfile.worker
+    dockerfilePath: ./infra/Dockerfile.worker
     dockerContext: .
     plan: free
     envVars:
