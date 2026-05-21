@@ -97,7 +97,8 @@ app.use(express.static(frontendPublicPath));
 
 // --------------- SPA Fallback (fixes page refresh) ---------------
 // Any route that is NOT an API route returns index.html so React Router handles it
-app.get("*", (req, res, next) => {
+// Note: Express 5 uses {*path} syntax — bare '*' was removed in path-to-regexp v8
+app.get("/{*path}", (req, res, next) => {
   if (
     req.path.startsWith("/api") ||
     req.path.startsWith("/hooks") ||
