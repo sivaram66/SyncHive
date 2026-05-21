@@ -8,6 +8,8 @@ import { SignupPage } from '@/pages/SignupPage'
 import { WorkflowsPage } from '@/pages/WorkflowsPage'
 import { EditorPage } from '@/pages/EditorPage'
 import { ExecutionsPage } from '@/pages/ExecutionsPage'
+import { IntegrationsPage } from '@/pages/IntegrationsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import styles from './App.module.css'
 
@@ -55,10 +57,10 @@ export default function App() {
             <Route path="/workflows"     element={<WorkflowsPage />} />
             <Route path="/workflows/:id" element={<EditorPage />} />
             <Route path="/executions"    element={<ExecutionsPage />} />
-            <Route path="/integrations"  element={<PlaceholderPage title="Integrations" subtitle="Real connectors coming soon." />} />
-            <Route path="/scheduler"     element={<PlaceholderPage title="Scheduler" subtitle="Cron-based triggers coming soon." />} />
+            <Route path="/integrations"  element={<IntegrationsPage />} />
+            <Route path="/scheduler"     element={<PlaceholderPage title="Scheduler" subtitle="Visual cron job manager coming soon." />} />
             <Route path="/logs"          element={<PlaceholderPage title="Logs" subtitle="Structured execution logs coming soon." />} />
-            <Route path="/settings"      element={<PlaceholderPage title="Settings" subtitle="Account settings coming soon." />} />
+            <Route path="/settings"      element={<SettingsPage />} />
           </Route>
         </Route>
 

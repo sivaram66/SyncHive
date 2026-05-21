@@ -37,6 +37,15 @@ export const authApi = {
 
   login: (payload: LoginPayload) =>
     api.post<ApiResponse<AuthResponse>>('/auth/login', payload).then(r => r.data),
+
+  me: () =>
+    api.get<ApiResponse<{ id: string; name: string; email: string; createdAt: string }>>('/auth/me').then(r => r.data),
+
+  updateProfile: (name: string) =>
+    api.patch<ApiResponse<{ id: string; name: string; email: string; createdAt: string }>>('/auth/me', { name }).then(r => r.data),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.patch<ApiResponse<{ message: string }>>('/auth/password', { currentPassword, newPassword }).then(r => r.data),
 }
 
 /* ─── WORKFLOWS ───────────────────────────────────────────── */
