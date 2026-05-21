@@ -9,22 +9,33 @@ import styles from './ExecutionsPage.module.css'
 const STATUS_FILTERS = ['All', 'Running', 'Completed', 'Failed'] as const
 type Filter = typeof STATUS_FILTERS[number]
 
+const RETRYABLE = new Set(['failed', 'cancelled', 'timed_out'])
+
 export function ExecutionsPage() {
   const { executions: storeExecutions, setExecutions } = useWorkflowStore()
   const [allExecutions, setAllExecutions]   = useState<WorkflowExecution[]>(storeExecutions)
   const [loadingAll,    setLoadingAll]      = useState(true)
+  const [hasMore,       setHasMore]         = useState(false)
+  const [page,          setPage]            = useState(1)
+  const [loadingMore,   setLoadingMore]     = useState(false)
   const [activeFilter,  setActiveFilter]    = useState<Filter>('All')
   const [expandedId,    setExpandedId]      = useState<string | null>(null)
   const [steps,         setSteps]           = useState<StepExecution[]>([])
   const [stepsLoading,  setStepsLoading]    = useState(false)
   const [stepsError,    setStepsError]      = useState<string | null>(null)
+  const [retrying,      setRetrying]        = useState<string | null>(null)
 
-  // Load all executions from API on mount
   useEffect(() => {
     setLoadingAll(true)
-    executionsApi.list()
-      .then(res => { if (res.success && res.data) { setAllExecutions(res.data); setExecutions(res.data) } })
-      .catch(() => {}) // fallback to store data already set above
+    executionsApi.list(1, 50)
+      .then(res => {
+        if (res.success && res.data) {
+          setAllExecutions(res.data)
+          setExecutions(res.data)
+          setHasMore(!!(res as any).meta?.hasMore)
+        }
+      })
+      .catch(() => {})
       .finally(() => setLoadingAll(false))
   }, [])
 
@@ -41,6 +52,32 @@ export function ExecutionsPage() {
     completed: executions.filter(e => e.status === 'completed').length,
     failed:    executions.filter(e => e.status === 'failed').length,
   }
+
+  const loadMore = useCallback(async () => {
+    setLoadingMore(true)
+    const nextPage = page + 1
+    try {
+      const res = await executionsApi.list(nextPage, 50)
+      if (res.success && res.data) {
+        setAllExecutions(prev => [...prev, ...res.data!])
+        setPage(nextPage)
+        setHasMore(!!(res as any).meta?.hasMore)
+      }
+    } catch {} finally { setLoadingMore(false) }
+  }, [page])
+
+  const handleRetry = useCallback(async (e: React.MouseEvent, executionId: string) => {
+    e.stopPropagation()
+    setRetrying(executionId)
+    try {
+      const res = await executionsApi.retry(executionId)
+      if (res.success && res.data) {
+        // Prepend the new queued execution
+        const res2 = await executionsApi.list(1, 50)
+        if (res2.success && res2.data) { setAllExecutions(res2.data); setExecutions(res2.data) }
+      }
+    } catch {} finally { setRetrying(null) }
+  }, [setExecutions])
 
   const handleRowClick = useCallback(async (executionId: string) => {
     if (expandedId === executionId) {
@@ -154,6 +191,16 @@ export function ExecutionsPage() {
                       <path d="M2.5 4.5l3.5 3.5 3.5-3.5"/>
                     </svg>
                   </span>
+                  {RETRYABLE.has(ex.status) && (
+                    <button
+                      className={styles.retryBtn}
+                      onClick={(e) => handleRetry(e, ex.id)}
+                      disabled={retrying === ex.id}
+                      title="Retry this execution"
+                    >
+                      {retrying === ex.id ? '…' : '↺'}
+                    </button>
+                  )}
                 </div>
 
                 {/* Step output drawer */}
@@ -202,6 +249,19 @@ export function ExecutionsPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Load More */}
+      {hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '16px' }}>
+          <button
+            className={styles.loadMoreBtn}
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Loading…' : 'Load more executions'}
+          </button>
         </div>
       )}
     </div>

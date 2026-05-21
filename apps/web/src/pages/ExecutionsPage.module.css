@@ -340,3 +340,36 @@
 .emptyIcon { color: var(--t4); margin-bottom: 4px; }
 .emptyTitle { font-size: 16px; font-weight: 600; color: var(--t2); }
 .emptySub   { font-size: 13px; color: var(--t4); }
+
+/* Retry button */
+.retryBtn {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(245,158,11,0.35);
+  background: rgba(245,158,11,0.10);
+  color: #fbbf24;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.retryBtn:hover   { background: rgba(245,158,11,0.22); }
+.retryBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Load more button */
+.loadMoreBtn {
+  padding: 8px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--border-2);
+  background: var(--glass2);
+  color: var(--t3);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font);
+}
+.loadMoreBtn:hover   { background: var(--glass3); color: var(--t2); }
+.loadMoreBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+

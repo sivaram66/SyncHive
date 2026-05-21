@@ -120,9 +120,13 @@ export const executionsApi = {
   steps: (executionId: string) =>
     api.get<ApiResponse<import('@/types').StepExecution[]>>(`/executions/${executionId}/steps`).then(r => r.data),
 
-  /** All executions across all workflows (global view) */
-  list: () =>
-    api.get<ApiResponse<WorkflowExecution[]>>('/executions').then(r => r.data),
+  /** All executions across all workflows (paginated) */
+  list: (page = 1, limit = 50) =>
+    api.get<ApiResponse<WorkflowExecution[]>>('/executions', { params: { page, limit } }).then(r => r.data),
+
+  /** Retry a failed/cancelled execution */
+  retry: (executionId: string) =>
+    api.post<ApiResponse<{ executionId: string }>>(`/executions/${executionId}/retry`).then(r => r.data),
 }
 
 export default api
