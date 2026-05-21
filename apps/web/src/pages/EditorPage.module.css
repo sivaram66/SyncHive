@@ -164,6 +164,22 @@
 }
 .clearBtn:hover { background: var(--glass2); color: var(--t3); }
 
+.pauseBtn {
+  background: rgba(245,158,11,0.12);
+  border: 0.5px solid rgba(245,158,11,0.35);
+  color: #fbbf24;
+}
+.pauseBtn:hover { background: rgba(245,158,11,0.22); }
+.pauseBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.deactivateBtn {
+  background: rgba(239,68,68,0.12);
+  border: 0.5px solid rgba(239,68,68,0.35);
+  color: var(--red);
+}
+.deactivateBtn:hover { background: rgba(239,68,68,0.22); }
+.deactivateBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ─── Body: canvas + panel ────────────────────── */
 .body {
   display: flex;

@@ -29,6 +29,7 @@ export function EditorPage() {
   const { activeExecutionId, nodeStatuses, setActiveExecution, reset } = useExecutionLiveStore()
 
   const [activating,    setActivating]    = useState(false)
+  const [pausing,       setPausing]       = useState(false)
   const [executing,     setExecuting]     = useState(false)
   const [showAddNode,   setShowAddNode]   = useState(false)
   const [panelOpen,     setPanelOpen]     = useState(true)
@@ -71,6 +72,42 @@ export function EditorPage() {
       showToast(`Cannot activate: ${msg}`, 'error')
     } finally {
       setActivating(false)
+    }
+  }
+
+  async function handlePause() {
+    if (!workflow) return
+    setPausing(true)
+    try {
+      const res = await workflowsApi.pause(workflow.id)
+      if (res.success) {
+        updateWorkflow(workflow.id, { status: 'paused' })
+        showToast('⏸ Workflow paused — webhooks and schedules will not trigger.')
+      } else {
+        showToast(`Failed to pause: ${res.error ?? 'Unknown error'}`, 'error')
+      }
+    } catch {
+      showToast('Failed to pause workflow', 'error')
+    } finally {
+      setPausing(false)
+    }
+  }
+
+  async function handleDeactivate() {
+    if (!workflow) return
+    setPausing(true)
+    try {
+      const res = await workflowsApi.deactivate(workflow.id)
+      if (res.success) {
+        updateWorkflow(workflow.id, { status: 'draft' })
+        showToast('🔴 Workflow deactivated — returned to draft.')
+      } else {
+        showToast(`Failed to deactivate: ${res.error ?? 'Unknown error'}`, 'error')
+      }
+    } catch {
+      showToast('Failed to deactivate workflow', 'error')
+    } finally {
+      setPausing(false)
     }
   }
 
@@ -179,6 +216,21 @@ export function EditorPage() {
           {workflow.status === 'active' && (
             <button className={clsx(styles.btn, styles.activateBtn)} onClick={handleActivate} disabled={activating} title="Re-freeze snapshot with latest node configs">
               {activating ? <MiniSpinner /> : '↻ Re-activate'}
+            </button>
+          )}
+          {workflow.status === 'active' && (
+            <button className={clsx(styles.btn, styles.pauseBtn)} onClick={handlePause} disabled={pausing} title="Pause — stops new triggers without deleting">
+              {pausing ? <MiniSpinner /> : '⏸ Pause'}
+            </button>
+          )}
+          {workflow.status === 'paused' && (
+            <button className={clsx(styles.btn, styles.activateBtn)} onClick={handleActivate} disabled={activating} title="Resume workflow">
+              {activating ? <MiniSpinner /> : '▶ Resume'}
+            </button>
+          )}
+          {workflow.status === 'paused' && (
+            <button className={clsx(styles.btn, styles.deactivateBtn)} onClick={handleDeactivate} disabled={pausing} title="Return to draft">
+              {pausing ? <MiniSpinner /> : '🔴 Deactivate'}
             </button>
           )}
           {workflow.status === 'active' && (

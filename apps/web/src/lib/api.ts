@@ -59,6 +59,12 @@ export const workflowsApi = {
   activate: (id: string) =>
     api.post<ApiResponse<Workflow>>(`/workflows/${id}/activate`).then(r => r.data),
 
+  pause: (id: string) =>
+    api.post<ApiResponse<{ workflowId: string; status: string }>>(`/workflows/${id}/pause`).then(r => r.data),
+
+  deactivate: (id: string) =>
+    api.post<ApiResponse<{ workflowId: string; status: string }>>(`/workflows/${id}/deactivate`).then(r => r.data),
+
   execute: (id: string, triggerData?: Record<string, unknown>) =>
     api.post<ApiResponse<{ executionId: string }>>(`/workflows/${id}/execute`, { triggerData }).then(r => r.data),
 

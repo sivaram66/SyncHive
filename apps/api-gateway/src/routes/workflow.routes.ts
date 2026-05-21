@@ -316,6 +316,76 @@ workflowRouter.post(
   }
 );
 
+// ==================== PAUSE WORKFLOW ====================
+
+workflowRouter.post(
+  "/:workflowId/pause",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const workflowId = req.params.workflowId as string;
+
+      const [updated] = await db
+        .update(workflows)
+        .set({ status: "paused", updatedAt: new Date() })
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.createdBy, req.user!.userId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new AppError(404, "WORKFLOW_NOT_FOUND", "Workflow not found");
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        data: { workflowId, status: "paused" },
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ==================== DEACTIVATE WORKFLOW ====================
+
+workflowRouter.post(
+  "/:workflowId/deactivate",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const workflowId = req.params.workflowId as string;
+
+      const [updated] = await db
+        .update(workflows)
+        .set({ status: "draft", updatedAt: new Date() })
+        .where(
+          and(
+            eq(workflows.id, workflowId),
+            eq(workflows.createdBy, req.user!.userId)
+          )
+        )
+        .returning();
+
+      if (!updated) {
+        throw new AppError(404, "WORKFLOW_NOT_FOUND", "Workflow not found");
+      }
+
+      const response: ApiResponse = {
+        success: true,
+        data: { workflowId, status: "draft" },
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // ==================== NODES ====================
 
 // Add a node to a workflow
