@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore, useThemeStore } from '@/lib/store'
 import { TopNav } from '@/components/layout/TopNav'
@@ -24,6 +25,72 @@ function ThemeSync() {
   return null
 }
 
+type BackendWakeStatus = 'checking' | 'waking' | 'ready' | 'error' | 'hidden'
+
+function BackendWakeNotice() {
+  const [status, setStatus] = useState<BackendWakeStatus>('checking')
+
+  useEffect(() => {
+    let cancelled = false
+    let readyTimer: number | undefined
+
+    const slowTimer = window.setTimeout(() => {
+      if (!cancelled) setStatus('waking')
+    }, 1500)
+
+    async function wakeBackend() {
+      const apiOrigin = (import.meta.env.VITE_API_ORIGIN as string | undefined)?.replace(/\/$/, '') ?? ''
+
+      try {
+        const response = await fetch(`${apiOrigin}/health/ping`, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: { Accept: 'application/json' },
+        })
+
+        if (!response.ok) throw new Error(`Health check failed: ${response.status}`)
+        if (cancelled) return
+
+        window.clearTimeout(slowTimer)
+        setStatus('ready')
+        readyTimer = window.setTimeout(() => {
+          if (!cancelled) setStatus('hidden')
+        }, 1800)
+      } catch {
+        if (cancelled) return
+        window.clearTimeout(slowTimer)
+        setStatus('error')
+      }
+    }
+
+    wakeBackend()
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(slowTimer)
+      if (readyTimer) window.clearTimeout(readyTimer)
+    }
+  }, [])
+
+  if (status === 'hidden') return null
+
+  const message =
+    status === 'ready'
+      ? 'Backend is ready.'
+      : status === 'error'
+        ? 'Backend is taking longer than expected. Please refresh in a moment.'
+        : status === 'waking'
+          ? 'Waking the SyncHive backend on Render free tier. This can take 30-60 seconds.'
+          : 'Connecting to SyncHive backend...'
+
+  return (
+    <div className={styles.wakeNotice} data-status={status} role="status" aria-live="polite">
+      <span className={styles.wakePulse} />
+      <span>{message}</span>
+    </div>
+  )
+}
+
 function RequireAuth() {
   const { token } = useAuthStore()
   if (!token) return <Navigate to="/login" replace />
@@ -48,6 +115,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeSync />
+      <BackendWakeNotice />
       <ToastProvider />
       <Routes>
         {/* Public — no auth required */}
